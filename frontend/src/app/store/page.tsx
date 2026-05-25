@@ -1,0 +1,219 @@
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import { NewsletterForm } from '@/components/store/newsletter-form';
+
+export const metadata: Metadata = {
+  title: 'LYH — Modern Fashion Store',
+  description: 'Discover the latest fashion trends at LYH. Shop Women, Men, and Kids collections with free shipping on orders over $100.',
+};
+
+const categories = [
+  { label: 'Women', href: '/store/women', bg: 'bg-stone-100', textColor: 'text-stone-900' },
+  { label: 'Men',   href: '/store/men',   bg: 'bg-zinc-900',  textColor: 'text-white' },
+  { label: 'Kids',  href: '/store/kids',  bg: 'bg-stone-200', textColor: 'text-stone-900' },
+];
+
+const featuredProducts = [
+  { id: 1, name: 'Linen Oversized Shirt',   price: '$89',  tag: 'New',  category: 'Women' },
+  { id: 2, name: 'Slim Fit Chinos',         price: '$110', tag: null,   category: 'Men' },
+  { id: 3, name: 'Mini Floral Dress',       price: '$135', tag: 'Sale', category: 'Women' },
+  { id: 4, name: 'Relaxed Canvas Jacket',   price: '$195', tag: 'New',  category: 'Men' },
+];
+
+const perks = [
+  {
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    ),
+    title: 'Free Shipping',
+    description: 'On all orders over $100',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+      </svg>
+    ),
+    title: 'Easy Returns',
+    description: '30-day hassle-free returns',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+      </svg>
+    ),
+    title: 'Secure Payment',
+    description: '100% protected checkout',
+  },
+  {
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+      </svg>
+    ),
+    title: '24/7 Support',
+    description: 'Expert help whenever you need',
+  },
+];
+
+export default function StorePage() {
+  return (
+    <div className="flex flex-col">
+
+      {/* ── Hero ── */}
+      <section className="relative w-full bg-stone-950 text-white overflow-hidden">
+        {/* Background texture */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+
+        <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10 py-32 md:py-44 flex flex-col items-center text-center gap-8">
+          <span className="inline-block text-[10px] tracking-[0.35em] uppercase text-stone-400 border border-stone-700 rounded-full px-4 py-1.5">
+            Summer 2026 Collection
+          </span>
+
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extralight tracking-[0.05em] leading-[0.95] max-w-3xl">
+            Wear What<br />
+            <em className="not-italic font-normal" style={{ fontStyle: 'italic' }}>Moves You</em>
+          </h1>
+
+          <p className="max-w-md text-base text-stone-400 leading-relaxed">
+            Timeless pieces crafted with intention. Explore our latest collections for women, men, and kids.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            <Link
+              href="/store/new-arrivals"
+              className="px-8 py-3.5 bg-white text-black text-sm font-medium tracking-[0.1em] uppercase rounded-full hover:bg-stone-100 transition-colors"
+            >
+              Shop Now
+            </Link>
+            <Link
+              href="/store/sale"
+              className="px-8 py-3.5 border border-stone-600 text-stone-300 text-sm font-medium tracking-[0.1em] uppercase rounded-full hover:border-stone-400 hover:text-white transition-colors"
+            >
+              View Sale
+            </Link>
+          </div>
+        </div>
+
+        {/* Bottom gradient fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-stone-50 to-transparent" />
+      </section>
+
+      {/* ── Categories ── */}
+      <section className="max-w-screen-xl mx-auto px-6 lg:px-10 py-20 w-full">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl font-light tracking-[0.2em] uppercase text-stone-900">Shop by Category</h2>
+          <div className="w-8 h-px bg-stone-300 mx-auto mt-4" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {categories.map((cat) => (
+            <Link
+              key={cat.label}
+              href={cat.href}
+              className={`group relative flex items-center justify-center h-64 rounded-2xl overflow-hidden ${cat.bg} transition-all duration-300 hover:scale-[1.02]`}
+            >
+              <span className={`text-2xl font-light tracking-[0.3em] uppercase ${cat.textColor} group-hover:tracking-[0.4em] transition-all duration-300`}>
+                {cat.label}
+              </span>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Featured Products ── */}
+      <section className="bg-stone-50 py-20">
+        <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-light tracking-[0.2em] uppercase text-stone-900">Featured Pieces</h2>
+            <div className="w-8 h-px bg-stone-300 mx-auto mt-4" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((product) => (
+              <article
+                key={product.id}
+                className="group bg-white rounded-xl overflow-hidden border border-stone-100 hover:shadow-md transition-shadow duration-300"
+              >
+                {/* Product image placeholder */}
+                <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="w-12 h-12 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  {product.tag && (
+                    <span className={`absolute top-3 left-3 text-[10px] font-semibold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full ${
+                      product.tag === 'Sale' ? 'bg-red-100 text-red-700' : 'bg-black text-white'
+                    }`}>
+                      {product.tag}
+                    </span>
+                  )}
+                  {/* Quick add hover */}
+                  <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
+                    <button className="w-full bg-black text-white text-[11px] font-medium tracking-[0.1em] uppercase py-2.5 rounded-lg hover:bg-stone-800 transition-colors">
+                      Quick Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Product info */}
+                <div className="p-4">
+                  <p className="text-[10px] tracking-[0.15em] uppercase text-stone-400 mb-1">{product.category}</p>
+                  <h3 className="text-sm font-medium text-stone-900 leading-snug">{product.name}</h3>
+                  <p className="mt-1.5 text-sm font-semibold text-stone-900">{product.price}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <Link
+              href="/store/new-arrivals"
+              className="inline-block px-8 py-3 border border-stone-300 text-stone-700 text-sm font-medium tracking-[0.1em] uppercase rounded-full hover:border-stone-900 hover:text-stone-900 transition-colors"
+            >
+              View All Products
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Perks Banner ── */}
+      <section className="border-y border-stone-100 py-14">
+        <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {perks.map((perk) => (
+              <div key={perk.title} className="flex flex-col items-center text-center gap-3">
+                <div className="text-stone-400">{perk.icon}</div>
+                <div>
+                  <p className="text-sm font-semibold text-stone-900 tracking-wide">{perk.title}</p>
+                  <p className="text-xs text-stone-400 mt-0.5">{perk.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Newsletter CTA ── */}
+      <section className="bg-stone-950 text-white py-20">
+        <div className="max-w-screen-xl mx-auto px-6 lg:px-10 flex flex-col items-center text-center gap-6">
+          <h2 className="text-3xl font-light tracking-[0.15em] uppercase">Join the Circle</h2>
+          <p className="text-stone-400 text-sm max-w-sm leading-relaxed">
+            Subscribe for early access to new arrivals, exclusive offers, and style inspiration.
+          </p>
+          <NewsletterForm />
+        </div>
+      </section>
+
+    </div>
+  );
+}
