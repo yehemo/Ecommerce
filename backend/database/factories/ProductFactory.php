@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
  */
 class ProductFactory extends Factory
 {
+
     /**
      * Define the model's default state.
      *
@@ -21,12 +22,13 @@ class ProductFactory extends Factory
     {
         $name = fake()->unique()->words(3, true);
 
-        return [
+       return [
             'category_id' => Category::factory(),
             'name' => Str::title($name),
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(100, 999),
-            'description' => fake()->sentence(),
-            'status' => fake()->randomElement(['draft', 'active']),
+            'description' => fake()->paragraph(),
+            'status' => fake()->randomElement(['active', 'inactive']),
         ];
+
     }
 }
