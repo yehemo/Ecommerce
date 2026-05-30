@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('product_variant_option_values', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            // Pure pivot table — no surrogate id; composite PK prevents duplicates.
             $table->foreignUuid('product_variant_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('option_value_id')->constrained('product_option_values')->cascadeOnDelete();
 
-            $table->unique(['product_variant_id', 'option_value_id']);
+            $table->primary(['product_variant_id', 'option_value_id']);
         });
     }
 

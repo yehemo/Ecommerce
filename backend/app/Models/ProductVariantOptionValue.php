@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasPrimaryUuid;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class ProductVariantOptionValue extends Model
+class ProductVariantOptionValue extends Pivot
 {
-    /** @use HasFactory<\Database\Factories\ProductVariantOptionValueFactory> */
-    use HasFactory, HasPrimaryUuid;
+    /**
+     * Pure pivot table — no surrogate primary key, no timestamps.
+     * Laravel's BelongsToMany::attach() only inserts the two FK columns,
+     * so this must be a Pivot (not a full Model with HasPrimaryUuid).
+     */
+    public $incrementing = false;
+    public $timestamps   = false;
 
-    public $timestamps = false;
+    protected $table = 'product_variant_option_values';
 
     protected $fillable = [
         'product_variant_id',

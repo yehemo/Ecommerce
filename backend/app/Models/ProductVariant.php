@@ -64,6 +64,6 @@ class ProductVariant extends Model
             'product_variant_option_values',
             'product_variant_id',
             'option_value_id'
-        );
+        )->using(ProductVariantOptionValue::class);
     }
 }
