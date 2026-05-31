@@ -12,7 +12,7 @@ class StoreCartItemRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return $this->user() !== null;
     }
 
     /**
@@ -23,7 +23,8 @@ class StoreCartItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'product_variant_id' => ['required', 'uuid', 'exists:product_variants,id'],
+            'quantity' => ['required', 'integer', 'min:1'],
         ];
     }
 }

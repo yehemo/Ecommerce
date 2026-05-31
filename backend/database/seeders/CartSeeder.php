@@ -2,16 +2,24 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Cart;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class CartSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        //
+        $customers = User::query()
+            ->where('role', 'customer')
+            ->take(5)
+            ->get();
+
+        foreach ($customers as $customer) {
+            Cart::query()->firstOrCreate([
+                'user_id' => $customer->id,
+                'status' => 'active',
+            ]);
+        }
     }
 }
