@@ -8,11 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreProductVariantRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Anyone may create variants for now.
+     * Tighten with a Policy when auth is wired up.
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +24,12 @@ class StoreProductVariantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'sku'              => ['required', 'string', 'max:100', 'unique:product_variants,sku'],
+            'price_minor'      => ['required', 'integer', 'min:0'],
+            'stock_qty'        => ['sometimes', 'integer', 'min:0'],
+            'status'           => ['sometimes', 'string', 'in:active,inactive'],
+            'option_value_ids'   => ['sometimes', 'array'],
+            'option_value_ids.*' => ['uuid', 'exists:product_option_values,id'],
         ];
     }
 }
