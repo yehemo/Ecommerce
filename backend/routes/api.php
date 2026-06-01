@@ -18,5 +18,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cart/items/{cartItem}', [CartItemController::class, 'destroy']);
 });
 
-Route::apiResource('categories', CategoryController::class);
-Route::apiResource('products', ProductController::class);
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{category}', [CategoryController::class, 'show']);
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{product}', [ProductController::class, 'show']);
+
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::match(['put', 'patch'], '/categories/{category}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
+    Route::post('/products', [ProductController::class, 'store']);
+    Route::match(['put', 'patch'], '/products/{product}', [ProductController::class, 'update']);
+    Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+});

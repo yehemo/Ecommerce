@@ -3,6 +3,17 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
 import useSWR from "swr";
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: "customer" | "admin";
+  status: string;
+  email_verified_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface UseAuthProps {
   middleware?: "guest" | "auth";
   redirectIfAuthenticated?: string;
@@ -18,15 +29,18 @@ export const useAuth = ({
     data: user,
     error,
     mutate,
-  } = useSWR("/api/user", () =>
-    axios
-      .get("/api/user")
-      .then((res) => res.data)
-      .catch((error) => {
-        // 409 means email not verified — surface it, don't swallow
-        if (error.response?.status !== 409) throw error;
-      })
-  );
+  } = useSWR<AuthUser | undefined>("/api/user", async (): Promise<AuthUser | undefined> => {
+    try {
+      const response = await axios.get("/api/user");
+
+      return response.data as AuthUser;
+    } catch (error: any) {
+      // 409 means email not verified — surface it, don't swallow
+      if (error.response?.status !== 409) throw error;
+
+      return undefined;
+    }
+  });
 
   const csrf = useCallback(() => axios.get("/sanctum/csrf-cookie"), []);
 
@@ -90,6 +104,7 @@ export const useAuth = ({
 
   return {
     user,
+    error,
     login,
     register,
     logout,
