@@ -71,6 +71,14 @@ export function Header() {
           {/* Auth Actions */}
           {user ? (
             <div className="hidden sm:flex items-center gap-2">
+              {user.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="text-[11px] font-medium tracking-[0.1em] uppercase text-stone-500 hover:text-black transition-colors border border-stone-200 hover:border-stone-400 rounded-full px-3 py-1.5"
+                >
+                  Admin
+                </Link>
+              )}
               <span className="text-[11px] tracking-wide text-stone-500">
                 Hi, {user.name?.split(' ')[0]}
               </span>
@@ -136,6 +144,15 @@ export function Header() {
             {user ? (
               <>
                 <p className="text-sm text-stone-500">Hi, {user.name}</p>
+                {user.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full text-center text-sm font-medium tracking-[0.1em] uppercase border border-stone-300 rounded-full py-2.5 text-stone-600 hover:text-black hover:border-black transition-colors"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <button
                   onClick={() => { setMenuOpen(false); logout(); }}
                   className="w-full text-center text-sm font-medium tracking-[0.1em] uppercase border border-stone-300 rounded-full py-2.5 text-stone-600 hover:text-black hover:border-black transition-colors"

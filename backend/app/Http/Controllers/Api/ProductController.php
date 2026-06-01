@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -105,19 +107,68 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
 
-        $product->update([
-            'category_id' => $validated['category_id'] ?? $product->category_id,
-            'name'        => $validated['name']        ?? $product->name,
-            'slug'        => isset($validated['name'])
-                                ? Str::slug($validated['name']) . '-' . time()
-                                : $product->slug,
-            'description' => $validated['description'] ?? $product->description,
-            'status'      => $validated['status']      ?? $product->status,
-        ]);
+        $product = DB::transaction(function () use ($product, $validated) {
+            $product->update([
+                'category_id' => $validated['category_id'] ?? $product->category_id,
+                'name'        => $validated['name']        ?? $product->name,
+                'slug'        => isset($validated['name'])
+                    ? Str::slug($validated['name']) . '-' . time()
+                    : $product->slug,
+                'description' => $validated['description'] ?? $product->description,
+                'status'      => $validated['status']      ?? $product->status,
+            ]);
+
+            if (!empty($validated['variants'])) {
+                $existingVariants = $product->variants()->get()->keyBy('id');
+
+                foreach ($validated['variants'] as $index => $variantData) {
+                    $variantId = $variantData['id'] ?? null;
+
+                    $skuOwner = ProductVariant::query()
+                        ->where('sku', $variantData['sku'])
+                        ->when($variantId, fn ($query) => $query->where('id', '!=', $variantId))
+                        ->exists();
+
+                    if ($skuOwner) {
+                        throw ValidationException::withMessages([
+                            "variants.{$index}.sku" => ['The SKU has already been taken.'],
+                        ]);
+                    }
+
+                    if ($variantId) {
+                        $variant = $existingVariants->get($variantId);
+
+                        if (!$variant) {
+                            throw ValidationException::withMessages([
+                                "variants.{$index}.id" => ['The selected variant does not belong to this product.'],
+                            ]);
+                        }
+
+                        $variant->update([
+                            'sku' => $variantData['sku'],
+                            'price_minor' => $variantData['price_minor'],
+                            'stock_qty' => $variantData['stock_qty'],
+                            'status' => $variantData['status'] ?? $variant->status,
+                        ]);
+
+                        continue;
+                    }
+
+                    $product->variants()->create([
+                        'sku' => $variantData['sku'],
+                        'price_minor' => $variantData['price_minor'],
+                        'stock_qty' => $variantData['stock_qty'],
+                        'status' => $variantData['status'] ?? 'active',
+                    ]);
+                }
+            }
+
+            return $product->fresh()->load('category', 'variants.optionValues', 'optionTypes.values');
+        });
 
         return response()->json([
             'message' => 'Product updated successfully.',
-            'data'    => $product->fresh()->load('category', 'variants.optionValues', 'optionTypes.values'),
+            'data'    => $product,
         ]);
     }
 
