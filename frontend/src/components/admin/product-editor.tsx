@@ -9,6 +9,15 @@ type Category = {
   name: string;
 };
 
+type ProductOptionValue = {
+  id: string;
+  value: string;
+  option_type?: {
+    id: string;
+    name: string;
+  };
+};
+
 type ProductOptionType = {
   id: string;
   name: string;
@@ -24,6 +33,13 @@ type ProductVariant = {
   price_minor: number;
   stock_qty: number;
   status: string;
+  option_values?: ProductOptionValue[];
+};
+
+type ProductImage = {
+  id: string;
+  image_url: string;
+  sort_order: number;
 };
 
 type Product = {
@@ -34,6 +50,7 @@ type Product = {
   status: string;
   variants: ProductVariant[];
   option_types: ProductOptionType[];
+  images: ProductImage[];
 };
 
 type ProductEditorProps = {
@@ -50,36 +67,55 @@ type OptionDraft = {
 type VariantDraft = {
   key: string;
   id?: string;
-  sku: string;
   priceMinor: string;
   stockQty: string;
   status: string;
   selections: Record<string, string>;
 };
 
+type ImageDraft = {
+  key: string;
+  id?: string;
+  imageUrl: string;
+  sortOrder: string;
+};
+
 type ApiValidationErrors = Record<string, string[]>;
 
 const emptyVariant = (): VariantDraft => ({
   key: crypto.randomUUID(),
-  sku: '',
   priceMinor: '',
   stockQty: '',
   status: 'active',
   selections: {},
 });
 
+const emptyImage = (): ImageDraft => ({
+  key: crypto.randomUUID(),
+  imageUrl: '',
+  sortOrder: '0',
+});
+
+const slugPart = (value: string) =>
+  value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+
 export function ProductEditor({ mode, productId }: ProductEditorProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [product, setProduct] = useState<Product | null>(null);
   const [categoryId, setCategoryId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('active');
   const [options, setOptions] = useState<OptionDraft[]>([]);
   const [variants, setVariants] = useState<VariantDraft[]>([emptyVariant()]);
+  const [images, setImages] = useState<ImageDraft[]>([emptyImage()]);
   const [errors, setErrors] = useState<ApiValidationErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -100,23 +136,50 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
         if (productResponse) {
           const payload = productResponse.data.data as Product;
 
-          setProduct(payload);
           setCategoryId(payload.category_id);
           setName(payload.name);
           setDescription(payload.description ?? '');
           setStatus(payload.status);
+          setOptions(
+            payload.option_types.length
+              ? payload.option_types.map((optionType) => ({
+                  key: optionType.id,
+                  name: optionType.name,
+                  valuesText: optionType.values.map((value) => value.value).join(', '),
+                }))
+              : []
+          );
           setVariants(
             payload.variants.length
               ? payload.variants.map((variant) => ({
                   key: variant.id,
                   id: variant.id,
-                  sku: variant.sku,
                   priceMinor: String(variant.price_minor),
                   stockQty: String(variant.stock_qty),
                   status: variant.status,
-                  selections: {},
+                  selections: (variant.option_values ?? []).reduce<Record<string, string>>((carry, optionValue) => {
+                    const optionTypeName = optionValue.option_type?.name;
+
+                    if (optionTypeName) {
+                      carry[optionTypeName] = optionValue.value;
+                    }
+
+                    return carry;
+                  }, {}),
                 }))
               : [emptyVariant()]
+          );
+          setImages(
+            payload.images.length
+              ? payload.images
+                  .sort((left, right) => left.sort_order - right.sort_order)
+                  .map((image) => ({
+                    key: image.id,
+                    id: image.id,
+                    imageUrl: image.image_url,
+                    sortOrder: String(image.sort_order),
+                  }))
+              : [emptyImage()]
           );
         }
       } catch {
@@ -151,6 +214,26 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
     [options]
   );
 
+  const parsedImages = useMemo(
+    () =>
+      images
+        .map((image) => ({
+          image_url: image.imageUrl.trim(),
+          sort_order: Number(image.sortOrder || 0),
+        }))
+        .filter((image) => image.image_url),
+    [images]
+  );
+
+  const buildVariantSku = (variant: VariantDraft, index: number) => {
+    const base = slugPart(name) || 'PRODUCT';
+    const selectionParts = parsedOptions
+      .map((option) => slugPart(variant.selections[option.name] ?? ''))
+      .filter(Boolean);
+
+    return [base, ...selectionParts, String(index + 1)].join('-');
+  };
+
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     setErrors({});
@@ -161,40 +244,34 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
       name,
       description: description || null,
       status,
-    };
-
-    const editPayload = {
-      ...basePayload,
-      variants: variants.map((variant) => ({
-        ...(variant.id ? { id: variant.id } : {}),
-        sku: variant.sku,
-        price_minor: Number(variant.priceMinor),
-        stock_qty: Number(variant.stockQty),
-        status: variant.status,
-      })),
-    };
-
-    const createPayload = {
-      ...basePayload,
+      images: parsedImages,
       options: parsedOptions,
-      variants: variants.map((variant) => ({
-        sku: variant.sku,
-        price_minor: Number(variant.priceMinor),
-        stock_qty: Number(variant.stockQty),
-        status: variant.status,
-        options: Object.fromEntries(
-          Object.entries(variant.selections).filter(([, value]) => value)
-        ),
-      })),
     };
+
+    const variantsPayload = variants.map((variant, index) => ({
+      ...(variant.id ? { id: variant.id } : {}),
+      sku: buildVariantSku(variant, index),
+      price_minor: Number(variant.priceMinor),
+      stock_qty: Number(variant.stockQty),
+      status: variant.status,
+      options: Object.fromEntries(
+        Object.entries(variant.selections).filter(([, value]) => value)
+      ),
+    }));
 
     try {
       await axios.get('/sanctum/csrf-cookie');
 
       if (mode === 'create') {
-        await axios.post('/api/products', createPayload);
+        await axios.post('/api/products', {
+          ...basePayload,
+          variants: variantsPayload,
+        });
       } else {
-        await axios.patch(`/api/products/${productId}`, editPayload);
+        await axios.patch(`/api/products/${productId}`, {
+          ...basePayload,
+          variants: variantsPayload,
+        });
       }
 
       startTransition(() => {
@@ -309,95 +386,140 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
         </div>
       </section>
 
-      {mode === 'create' ? (
-        <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">Options</p>
-              <h3 className="mt-2 text-xl font-semibold text-white">Variant dimensions</h3>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setOptions((current) => [...current, { key: crypto.randomUUID(), name: '', valuesText: '' }])
-              }
-              className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
-            >
-              Add option
-            </button>
+      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">Options</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Variant dimensions</h3>
           </div>
+          <button
+            type="button"
+            onClick={() =>
+              setOptions((current) => [...current, { key: crypto.randomUUID(), name: '', valuesText: '' }])
+            }
+            className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
+          >
+            Add option
+          </button>
+        </div>
 
-          <div className="mt-6 space-y-4">
-            {options.length ? (
-              options.map((option, index) => (
-                <div key={option.key} className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-stone-950/60 p-5 md:grid-cols-[1fr_2fr_auto]">
-                  <label className="space-y-2 text-sm text-stone-300">
-                    <span>Option name</span>
-                    <input
-                      value={option.name}
-                      onChange={(event) =>
-                        setOptions((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, name: event.target.value } : item
-                          )
+        <div className="mt-6 space-y-4">
+          {options.length ? (
+            options.map((option, index) => (
+              <div key={option.key} className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-stone-950/60 p-5 md:grid-cols-[1fr_2fr_auto]">
+                <label className="space-y-2 text-sm text-stone-300">
+                  <span>Option name</span>
+                  <input
+                    value={option.name}
+                    onChange={(event) =>
+                      setOptions((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, name: event.target.value } : item
                         )
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-                      placeholder="Color"
-                    />
-                  </label>
-                  <label className="space-y-2 text-sm text-stone-300">
-                    <span>Values</span>
-                    <input
-                      value={option.valuesText}
-                      onChange={(event) =>
-                        setOptions((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, valuesText: event.target.value } : item
-                          )
+                      )
+                    }
+                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
+                    placeholder="Color"
+                  />
+                </label>
+                <label className="space-y-2 text-sm text-stone-300">
+                  <span>Values</span>
+                  <input
+                    value={option.valuesText}
+                    onChange={(event) =>
+                      setOptions((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? { ...item, valuesText: event.target.value } : item
                         )
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-                      placeholder="Black, Cream, Olive"
-                    />
-                  </label>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => setOptions((current) => current.filter((item) => item.key !== option.key))}
-                      className="w-full rounded-full border border-red-500/30 px-4 py-3 text-sm font-medium text-red-200 transition hover:border-red-400 hover:text-red-100"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                      )
+                    }
+                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
+                    placeholder="Black, Cream, Olive"
+                  />
+                </label>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => setOptions((current) => current.filter((item) => item.key !== option.key))}
+                    className="w-full rounded-full border border-red-500/30 px-4 py-3 text-sm font-medium text-red-200 transition hover:border-red-400 hover:text-red-100"
+                  >
+                    Remove
+                  </button>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-stone-400">Add options only if the product has variant dimensions like color or size.</p>
-            )}
-          </div>
-        </section>
-      ) : (
-        <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-          <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">Options Snapshot</p>
-          <h3 className="mt-2 text-xl font-semibold text-white">Current option structure</h3>
-          <p className="mt-3 text-sm leading-6 text-stone-400">
-            Option editing is still read-only here. Variant price, stock, SKU, and status are editable in the section below.
-          </p>
-
-          {product?.option_types.length ? (
-            <div className="mt-6 flex flex-wrap gap-3">
-              {product.option_types.map((optionType) => (
-                <div key={optionType.id} className="rounded-full border border-white/10 px-4 py-2 text-sm text-stone-300">
-                  {optionType.name}: {optionType.values.map((value) => value.value).join(', ')}
-                </div>
-              ))}
-            </div>
+              </div>
+            ))
           ) : (
-            <p className="mt-6 text-sm text-stone-400">This product does not currently use option dimensions.</p>
+            <p className="text-sm text-stone-400">Add options if the product has variant dimensions like color or size.</p>
           )}
-        </section>
-      )}
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">Images</p>
+            <h3 className="mt-2 text-xl font-semibold text-white">Product image URLs</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setImages((current) => [...current, emptyImage()])}
+            className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
+          >
+            Add image
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {images.map((image, index) => (
+            <div key={image.key} className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-stone-950/60 p-5 md:grid-cols-[2fr_140px_auto]">
+              <label className="space-y-2 text-sm text-stone-300">
+                <span>Image URL</span>
+                <input
+                  value={image.imageUrl}
+                  onChange={(event) =>
+                    setImages((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, imageUrl: event.target.value } : item
+                      )
+                    )
+                  }
+                  className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
+                  placeholder="https://example.com/product-front.jpg"
+                />
+              </label>
+              <label className="space-y-2 text-sm text-stone-300">
+                <span>Sort order</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={image.sortOrder}
+                  onChange={(event) =>
+                    setImages((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, sortOrder: event.target.value } : item
+                      )
+                    )
+                  }
+                  className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
+                />
+              </label>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setImages((current) =>
+                      current.length === 1 ? [emptyImage()] : current.filter((item) => item.key !== image.key)
+                    )
+                  }
+                  className="w-full rounded-full border border-red-500/30 px-4 py-3 text-sm font-medium text-red-200 transition hover:border-red-400 hover:text-red-100"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
         <div className="flex items-center justify-between">
@@ -417,22 +539,12 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
         <div className="mt-6 space-y-5">
           {variants.map((variant, index) => (
             <div key={variant.key} className="rounded-[1.75rem] border border-white/10 bg-stone-950/60 p-5">
-              <div className="grid gap-4 md:grid-cols-4">
-                <label className="space-y-2 text-sm text-stone-300">
-                  <span>SKU</span>
-                  <input
-                    value={variant.sku}
-                    onChange={(event) =>
-                      setVariants((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, sku: event.target.value } : item
-                        )
-                      )
-                    }
-                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-                    placeholder="SKU-BLACK-S"
-                  />
-                </label>
+              <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-300">Generated SKU</p>
+                <p className="mt-2 break-all text-sm font-semibold text-white">{buildVariantSku(variant, index)}</p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
                 <label className="space-y-2 text-sm text-stone-300">
                   <span>Price (minor units)</span>
                   <input
@@ -487,7 +599,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
                 </label>
               </div>
 
-              {mode === 'create' && parsedOptions.length ? (
+              {parsedOptions.length ? (
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {parsedOptions.map((option) => (
                     <label key={option.name} className="space-y-2 text-sm text-stone-300">
@@ -509,7 +621,9 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
                     </label>
                   ))}
                 </div>
-              ) : null}
+              ) : (
+                <p className="mt-4 text-sm text-stone-400">Add option dimensions above to map selections to each variant.</p>
+              )}
 
               {variants.length > 1 && (
                 <div className="mt-5 flex justify-end">
@@ -525,12 +639,6 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
             </div>
           ))}
         </div>
-
-        {(errors.variants || errors['variants.0.sku'] || errors['variants.0.price_minor']) && (
-          <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            {errors.variants?.[0] ?? errors['variants.0.sku']?.[0] ?? errors['variants.0.price_minor']?.[0]}
-          </div>
-        )}
       </section>
 
       {formError && (

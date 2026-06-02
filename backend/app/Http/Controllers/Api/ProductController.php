@@ -65,7 +65,7 @@ class ProductController extends Controller
                     'sku'         => $variantData['sku'],
                     'price_minor' => $variantData['price_minor'],
                     'stock_qty'   => $variantData['stock_qty'],
-                    'status'      => 'active',
+                    'status'      => $variantData['status'] ?? 'active',
                 ]);
 
                 if (!empty($variantData['options'])) {
@@ -81,7 +81,17 @@ class ProductController extends Controller
                 }
             }
 
-            return $product->load('category', 'variants.optionValues', 'optionTypes.values');
+            if (!empty($validated['images'])) {
+                $product->images()->createMany(
+                    collect($validated['images'])->map(fn (array $image) => [
+                        'image_url' => $image['image_url'],
+                        'sort_order' => $image['sort_order'] ?? 0,
+                        'variant_id' => null,
+                    ])->all()
+                );
+            }
+
+            return $product->load('category', 'variants.optionValues', 'optionTypes.values', 'images');
         });
 
         return response()->json([
@@ -96,7 +106,7 @@ class ProductController extends Controller
     public function show(Product $product): JsonResponse
     {
         return response()->json([
-            'data' => $product->load('category', 'variants.optionValues', 'optionTypes.values', 'images'),
+            'data' => $product->load('category', 'variants.optionValues.optionType', 'optionTypes.values', 'images'),
         ]);
     }
 
@@ -118,8 +128,24 @@ class ProductController extends Controller
                 'status'      => $validated['status']      ?? $product->status,
             ]);
 
+            $optionMap = [];
+
+            if (array_key_exists('options', $validated)) {
+                $product->optionTypes()->delete();
+
+                foreach ($validated['options'] as $option) {
+                    $optionType = $product->optionTypes()->create(['name' => $option['name']]);
+
+                    foreach ($option['values'] as $value) {
+                        $created = $optionType->values()->create(['value' => $value]);
+                        $optionMap[$option['name']][$value] = $created->id;
+                    }
+                }
+            }
+
             if (!empty($validated['variants'])) {
                 $existingVariants = $product->variants()->get()->keyBy('id');
+                $submittedVariantIds = [];
 
                 foreach ($validated['variants'] as $index => $variantData) {
                     $variantId = $variantData['id'] ?? null;
@@ -151,19 +177,53 @@ class ProductController extends Controller
                             'status' => $variantData['status'] ?? $variant->status,
                         ]);
 
+                        $submittedVariantIds[] = $variant->id;
+
+                        if (array_key_exists('options', $validated)) {
+                            $variant->optionValues()->sync(
+                                $this->mapVariantOptionIds($variantData['options'] ?? [], $optionMap)
+                            );
+                        }
+
                         continue;
                     }
 
-                    $product->variants()->create([
+                    $variant = $product->variants()->create([
                         'sku' => $variantData['sku'],
                         'price_minor' => $variantData['price_minor'],
                         'stock_qty' => $variantData['stock_qty'],
                         'status' => $variantData['status'] ?? 'active',
                     ]);
+
+                    $submittedVariantIds[] = $variant->id;
+
+                    if (array_key_exists('options', $validated)) {
+                        $variant->optionValues()->sync(
+                            $this->mapVariantOptionIds($variantData['options'] ?? [], $optionMap)
+                        );
+                    }
+                }
+
+                $product->variants()
+                    ->whereNotIn('id', $submittedVariantIds)
+                    ->delete();
+            }
+
+            if (array_key_exists('images', $validated)) {
+                $product->images()->delete();
+
+                if (!empty($validated['images'])) {
+                    $product->images()->createMany(
+                        collect($validated['images'])->map(fn (array $image) => [
+                            'image_url' => $image['image_url'],
+                            'sort_order' => $image['sort_order'] ?? 0,
+                            'variant_id' => null,
+                        ])->all()
+                    );
                 }
             }
 
-            return $product->fresh()->load('category', 'variants.optionValues', 'optionTypes.values');
+            return $product->fresh()->load('category', 'variants.optionValues.optionType', 'optionTypes.values', 'images');
         });
 
         return response()->json([
@@ -180,5 +240,23 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json(['message' => 'Product deleted successfully.']);
+    }
+
+    /**
+     * @param  array<string, string>  $selectedOptions
+     * @param  array<string, array<string, string>>  $optionMap
+     * @return list<string>
+     */
+    private function mapVariantOptionIds(array $selectedOptions, array $optionMap): array
+    {
+        $ids = [];
+
+        foreach ($selectedOptions as $optionName => $optionValue) {
+            if (isset($optionMap[$optionName][$optionValue])) {
+                $ids[] = $optionMap[$optionName][$optionValue];
+            }
+        }
+
+        return $ids;
     }
 }
