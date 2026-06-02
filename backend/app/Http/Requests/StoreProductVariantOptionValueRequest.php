@@ -8,11 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreProductVariantOptionValueRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Anyone may attach option values to variants for now.
+     * Tighten with a Policy when auth is wired up.
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +24,8 @@ class StoreProductVariantOptionValueRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'option_value_ids'   => ['required', 'array', 'min:1'],
+            'option_value_ids.*' => ['required', 'uuid', 'exists:product_option_values,id'],
         ];
     }
 }

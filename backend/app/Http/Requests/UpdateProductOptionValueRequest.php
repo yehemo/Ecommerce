@@ -8,11 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdateProductOptionValueRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Anyone may update option values for now.
+     * Tighten with a Policy when auth is wired up.
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +24,7 @@ class UpdateProductOptionValueRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'value' => ['required', 'string', 'max:100'],
         ];
     }
 }

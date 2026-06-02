@@ -8,11 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdateProductVariantOptionValueRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Anyone may sync option values on variants for now.
+     * Tighten with a Policy when auth is wired up.
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +24,9 @@ class UpdateProductVariantOptionValueRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            // Can be an empty array to detach ALL option values from the variant
+            'option_value_ids'   => ['required', 'array'],
+            'option_value_ids.*' => ['uuid', 'exists:product_option_values,id'],
         ];
     }
 }
