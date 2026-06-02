@@ -11,8 +11,8 @@ use App\Http\Controllers\Api\ProductOptionValueController;
 use App\Http\Controllers\Api\ProductVariantController;
 use App\Http\Controllers\Api\ProductVariantOptionValueController;
 
-Route::middleware(['auth:sanctum'])->get('/user', function (Request \) {
-    return \->user();
+Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
+    return $request->user();
 });
 
 // Cart routes (auth required)
