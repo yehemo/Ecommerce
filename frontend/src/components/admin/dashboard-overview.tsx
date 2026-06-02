@@ -46,6 +46,12 @@ export function DashboardOverview() {
               View products
             </Link>
             <Link
+              href="/admin/categories"
+              className="rounded-full border border-white/15 px-5 py-3 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
+            >
+              View categories
+            </Link>
+            <Link
               href="/admin/products/new"
               className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-stone-200"
             >

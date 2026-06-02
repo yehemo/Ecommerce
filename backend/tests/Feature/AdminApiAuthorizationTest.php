@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,6 +83,12 @@ class AdminApiAuthorizationTest extends TestCase
             'category_id' => $category->id,
             'name' => 'Admin Product',
             'status' => 'active',
+            'images' => [
+                [
+                    'image_url' => 'https://example.com/product-a.jpg',
+                    'sort_order' => 0,
+                ],
+            ],
             'variants' => [
                 [
                     'sku' => 'SKU-ALLOW001',
@@ -98,8 +105,15 @@ class AdminApiAuthorizationTest extends TestCase
 
         $this->actingAs($admin)->patchJson("/api/products/{$productId}", [
             'name' => 'Admin Product Updated',
+            'images' => [
+                [
+                    'image_url' => 'https://example.com/product-b.jpg',
+                    'sort_order' => 1,
+                ],
+            ],
         ])->assertOk()
-            ->assertJsonPath('data.name', 'Admin Product Updated');
+            ->assertJsonPath('data.name', 'Admin Product Updated')
+            ->assertJsonPath('data.images.0.image_url', 'https://example.com/product-b.jpg');
 
         $this->actingAs($admin)->deleteJson("/api/products/{$productId}")
             ->assertOk();
@@ -132,6 +146,88 @@ class AdminApiAuthorizationTest extends TestCase
             ->assertJsonPath('data.variants.0.price_minor', 2999)
             ->assertJsonPath('data.variants.0.stock_qty', 12)
             ->assertJsonPath('data.variants.0.status', 'out_of_stock');
+    }
+
+    public function test_admin_can_update_product_options_and_variant_selections(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $product = Product::factory()->create([
+            'name' => 'Travel Jacket',
+        ]);
+        $variant = ProductVariant::factory()->create([
+            'product_id' => $product->id,
+            'sku' => 'TRAVEL-JACKET-OLD-1',
+            'price_minor' => 1500,
+            'stock_qty' => 2,
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($admin)->patchJson("/api/products/{$product->id}", [
+            'name' => 'Travel Jacket',
+            'options' => [
+                [
+                    'name' => 'Color',
+                    'values' => ['Black', 'Navy'],
+                ],
+                [
+                    'name' => 'Size',
+                    'values' => ['M', 'L'],
+                ],
+            ],
+            'variants' => [
+                [
+                    'id' => $variant->id,
+                    'sku' => 'TRAVEL-JACKET-BLACK-M-1',
+                    'price_minor' => 2200,
+                    'stock_qty' => 8,
+                    'status' => 'active',
+                    'options' => [
+                        'Color' => 'Black',
+                        'Size' => 'M',
+                    ],
+                ],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.option_types.0.name', 'Color')
+            ->assertJsonPath('data.variants.0.option_values.0.option_type.name', 'Color');
+
+        $this->assertDatabaseHas('product_option_types', [
+            'product_id' => $product->id,
+            'name' => 'Color',
+        ]);
+    }
+
+    public function test_admin_can_replace_product_images(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $product = Product::factory()->create();
+        ProductImage::factory()->create([
+            'product_id' => $product->id,
+            'image_url' => 'https://example.com/original.jpg',
+            'sort_order' => 0,
+        ]);
+
+        $this->actingAs($admin)->patchJson("/api/products/{$product->id}", [
+            'images' => [
+                [
+                    'image_url' => 'https://example.com/replaced-1.jpg',
+                    'sort_order' => 0,
+                ],
+                [
+                    'image_url' => 'https://example.com/replaced-2.jpg',
+                    'sort_order' => 1,
+                ],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('data.images.0.image_url', 'https://example.com/replaced-1.jpg')
+            ->assertJsonPath('data.images.1.image_url', 'https://example.com/replaced-2.jpg');
+
+        $this->assertDatabaseMissing('product_images', [
+            'product_id' => $product->id,
+            'image_url' => 'https://example.com/original.jpg',
+        ]);
     }
 
     public function test_customer_cannot_write_categories_and_admin_can(): void

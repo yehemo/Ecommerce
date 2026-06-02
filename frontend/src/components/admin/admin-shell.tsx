@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 const navItems = [
   { label: 'Dashboard', href: '/admin' },
   { label: 'Products', href: '/admin/products' },
+  { label: 'Categories', href: '/admin/categories' },
 ];
 
 export function AdminShell({
@@ -51,7 +52,9 @@ export function AdminShell({
 
             <nav className="space-y-2">
               {navItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isActive = item.href === '/admin'
+                  ? pathname === item.href
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
                 return (
                   <Link

@@ -34,7 +34,11 @@ class StoreProductRequest extends FormRequest
             'variants.*.sku'         => 'required|string|unique:product_variants,sku',
             'variants.*.price_minor' => 'required|integer|min:0',
             'variants.*.stock_qty'   => 'required|integer|min:0',
+            'variants.*.status'      => 'sometimes|string|in:active,out_of_stock,archived',
             'variants.*.options'     => 'sometimes|array',
+            'images'                 => 'sometimes|array',
+            'images.*.image_url'     => 'required_with:images|url|max:2048',
+            'images.*.sort_order'    => 'sometimes|integer|min:0',
         ];
     }
 }
