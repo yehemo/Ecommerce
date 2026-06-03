@@ -17,7 +17,7 @@ export function Footer() {
   return (
     <footer className="w-full bg-white border-t border-stone-100">
       {/* Main footer body */}
-      <div className="max-w-screen-xl mx-auto px-6 md:px-10 py-16 md:py-20 flex flex-col items-center gap-12">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-10 py-16 md:py-20 flex flex-col items-center gap-12">
 
         {/* Brand wordmark */}
         <Link href="/">
@@ -64,7 +64,7 @@ export function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-stone-100 px-6 md:px-10 py-5">
+      <div className="border-t border-stone-100 px-4 sm:px-6 lg:px-10 py-5">
         <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <p
             className="text-[10px] tracking-[0.15em] text-stone-300"

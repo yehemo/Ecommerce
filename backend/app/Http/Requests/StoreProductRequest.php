@@ -22,6 +22,8 @@ class StoreProductRequest extends FormRequest
             'name'                   => 'required|string|max:255',
             'description'            => 'nullable|string',
             'status'                 => 'sometimes|string|in:active,inactive,draft',
+            'is_new_arrival'         => 'sometimes|boolean',
+
 
             // Options: [{ name: 'Color', values: ['Red', 'Blue'] }]
             'options'                => 'sometimes|array',

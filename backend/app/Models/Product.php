@@ -19,6 +19,7 @@ class Product extends Model
         'slug',
         'description',
         'status',
+        'is_new_arrival',
     ];
 
     /**

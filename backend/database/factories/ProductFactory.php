@@ -28,6 +28,7 @@ class ProductFactory extends Factory
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(100, 999),
             'description' => fake()->paragraph(),
             'status' => fake()->randomElement(['active', 'inactive']),
+            'is_new_arrival' => fake()->boolean(20), // 20% chance to be new arrival
         ];
 
     }

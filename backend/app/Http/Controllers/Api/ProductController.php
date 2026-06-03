@@ -24,9 +24,57 @@ class ProductController extends Controller
         $query = Product::with(['category', 'variants', 'optionTypes.values', 'images'])
             ->when($request->status, fn ($q, $v) => $q->where('status', $v))
             ->when($request->category_id, fn ($q, $v) => $q->where('category_id', $v))
+            ->when($request->category_name, function ($q, $v) {
+                $q->whereHas('category', fn ($q2) => $q2->whereRaw('LOWER(name) = ?', [strtolower($v)]));
+            })
+            ->when($request->boolean('is_new_arrival'), fn ($q) => $q->where('is_new_arrival', true))
             ->when($request->search, fn ($q, $v) => $q->where('name', 'ilike', "%{$v}%"));
 
-        $products = $query->latest()->paginate($request->integer('per_page', 15));
+        // Filter by size/color (requires variants linked to option values)
+        if ($request->has('sizes') || $request->has('colors')) {
+            $query->whereHas('variants.optionValues', function ($q) use ($request) {
+                if ($request->has('sizes')) {
+                    $sizes = is_array($request->sizes) ? $request->sizes : explode(',', $request->sizes);
+                    $q->whereIn('value', $sizes);
+                }
+                if ($request->has('colors')) {
+                    $colors = is_array($request->colors) ? $request->colors : explode(',', $request->colors);
+                    $q->whereIn('value', $colors);
+                }
+            });
+        }
+
+        // Filter by price range
+        if ($request->filled('min_price') || $request->filled('max_price')) {
+            $query->whereHas('variants', function ($q) use ($request) {
+                if ($request->filled('min_price')) {
+                    $q->where('price_minor', '>=', $request->integer('min_price'));
+                }
+                if ($request->filled('max_price')) {
+                    $q->where('price_minor', '<=', $request->integer('max_price'));
+                }
+            });
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'newest');
+        switch ($sort) {
+            case 'price_asc':
+                $query->withMin('variants', 'price_minor')->orderBy('variants_min_price_minor', 'asc');
+                break;
+            case 'price_desc':
+                $query->withMax('variants', 'price_minor')->orderBy('variants_max_price_minor', 'desc');
+                break;
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'newest':
+            default:
+                $query->latest();
+                break;
+        }
+
+        $products = $query->paginate($request->integer('per_page', 15));
 
         return response()->json($products);
     }
@@ -41,11 +89,12 @@ class ProductController extends Controller
 
         $product = DB::transaction(function () use ($validated) {
             $product = Product::create([
-                'category_id' => $validated['category_id'],
-                'name'        => $validated['name'],
-                'slug'        => Str::slug($validated['name']) . '-' . time(),
-                'description' => $validated['description'] ?? null,
-                'status'      => $validated['status'] ?? 'active',
+                'category_id'    => $validated['category_id'],
+                'name'           => $validated['name'],
+                'slug'           => Str::slug($validated['name']) . '-' . time(),
+                'description'    => $validated['description'] ?? null,
+                'status'         => $validated['status'] ?? 'active',
+                'is_new_arrival' => $validated['is_new_arrival'] ?? false,
             ]);
 
             $optionMap = [];
@@ -119,13 +168,14 @@ class ProductController extends Controller
 
         $product = DB::transaction(function () use ($product, $validated) {
             $product->update([
-                'category_id' => $validated['category_id'] ?? $product->category_id,
-                'name'        => $validated['name']        ?? $product->name,
-                'slug'        => isset($validated['name'])
+                'category_id'    => $validated['category_id'] ?? $product->category_id,
+                'name'           => $validated['name']        ?? $product->name,
+                'slug'           => isset($validated['name'])
                     ? Str::slug($validated['name']) . '-' . time()
                     : $product->slug,
-                'description' => $validated['description'] ?? $product->description,
-                'status'      => $validated['status']      ?? $product->status,
+                'description'    => $validated['description'] ?? $product->description,
+                'status'         => $validated['status']      ?? $product->status,
+                'is_new_arrival' => $validated['is_new_arrival'] ?? $product->is_new_arrival,
             ]);
 
             $optionMap = [];

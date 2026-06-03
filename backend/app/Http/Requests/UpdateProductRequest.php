@@ -22,6 +22,7 @@ class UpdateProductRequest extends FormRequest
             'name'        => 'sometimes|string|max:255',
             'description' => 'sometimes|nullable|string',
             'status'      => 'sometimes|string|in:active,inactive,draft',
+            'is_new_arrival' => 'sometimes|boolean',
             'options'                => 'sometimes|array',
             'options.*.name'         => 'required_with:options|string|max:100',
             'options.*.values'       => 'required_with:options|array|min:1',

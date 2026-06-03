@@ -73,10 +73,12 @@ export default function ProductDetailPage() {
       // Only initialize if currently empty
       if (Object.keys(current).length > 0) return current;
 
-      const firstVariant = product.variants[0];
       const initialOptions: Record<string, string> = {};
-      firstVariant.option_values?.forEach(ov => {
-        if (ov.option_type) initialOptions[ov.option_type.name] = ov.value;
+      product.option_types.forEach(ot => {
+        const realValue = ot.values.find(v => v.value.toLowerCase() !== 'all');
+        if (realValue) {
+          initialOptions[ot.name] = realValue.value;
+        }
       });
       
       // If the product has no options, we don't need to change state.
@@ -90,7 +92,7 @@ export default function ProductDetailPage() {
   const currentVariant = useMemo(() => {
     if (!product || !product.variants) return null;
     
-    return product.variants.find(variant => {
+    const matches = product.variants.filter(variant => {
       if (!variant.option_values) return false;
       
       const variantOptions: Record<string, string> = {};
@@ -98,11 +100,21 @@ export default function ProductDetailPage() {
         if (ov.option_type) variantOptions[ov.option_type.name] = ov.value;
       });
       
-      // Check if all selected options match this variant
+      // Check if all selected options match this variant (allowing 'All' as a wildcard)
       return Object.entries(selectedOptions).every(
-        ([key, value]) => variantOptions[key] === value
+        ([key, value]) => {
+          const variantValue = variantOptions[key];
+          return variantValue === value || (variantValue && variantValue.toLowerCase() === 'all');
+        }
       );
-    }) || null;
+    });
+
+    // Return the most specific match (fewest 'All's)
+    return matches.sort((a, b) => {
+      const aAlls = a.option_values?.filter(ov => ov.value.toLowerCase() === 'all').length || 0;
+      const bAlls = b.option_values?.filter(ov => ov.value.toLowerCase() === 'all').length || 0;
+      return aAlls - bAlls;
+    })[0] || null;
   }, [product, selectedOptions]);
 
   const handleOptionSelect = (optionName: string, value: string) => {
@@ -212,34 +224,39 @@ export default function ProductDetailPage() {
           {/* Options Selection */}
           {product.option_types?.length > 0 && (
             <div className="space-y-8 mb-10">
-              {product.option_types.map((optionType) => (
-                <div key={optionType.id}>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm font-medium text-stone-900 uppercase tracking-wider">{optionType.name}</span>
-                    <span className="text-xs text-stone-500">{selectedOptions[optionType.name] || 'Select an option'}</span>
+              {product.option_types.map((optionType) => {
+                const visibleValues = optionType.values.filter(v => v.value.toLowerCase() !== 'all');
+                if (visibleValues.length === 0) return null;
+
+                return (
+                  <div key={optionType.id}>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium text-stone-900 uppercase tracking-wider">{optionType.name}</span>
+                      <span className="text-xs text-stone-500">{selectedOptions[optionType.name] || 'Select an option'}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2.5">
+                      {visibleValues.map((val) => {
+                        const isSelected = selectedOptions[optionType.name] === val.value;
+                        return (
+                          <button
+                            key={val.id}
+                            onClick={() => handleOptionSelect(optionType.name, val.value)}
+                            className={`
+                              px-5 py-2.5 text-sm font-medium rounded-full transition-all duration-300 border
+                              ${isSelected 
+                                ? 'bg-stone-900 border-stone-900 text-white shadow-md' 
+                                : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900'
+                              }
+                            `}
+                          >
+                            {val.value}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2.5">
-                    {optionType.values.map((val) => {
-                      const isSelected = selectedOptions[optionType.name] === val.value;
-                      return (
-                        <button
-                          key={val.id}
-                          onClick={() => handleOptionSelect(optionType.name, val.value)}
-                          className={`
-                            px-5 py-2.5 text-sm font-medium rounded-full transition-all duration-300 border
-                            ${isSelected 
-                              ? 'bg-stone-900 border-stone-900 text-white shadow-md' 
-                              : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900'
-                            }
-                          `}
-                        >
-                          {val.value}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

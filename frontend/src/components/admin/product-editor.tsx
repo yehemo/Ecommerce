@@ -323,7 +323,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
         setImages((current) =>
           current.map((img) =>
             img.key === draftKey
-              ? { ...img, isUploading: false, uploadError: 'Upload failed — try pasting a URL instead.' }
+              ? { ...img, isUploading: false, uploadError: 'Upload failed.' }
               : img
           )
         );
@@ -359,13 +359,22 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
     setErrors({});
     setFormError(null);
 
+    const optionsPayload = parsedOptions.map((opt) => {
+      const vals = new Set(opt.values);
+      variants.forEach((v) => {
+        const selected = v.selections[opt.name];
+        if (selected === 'All') vals.add('All');
+      });
+      return { name: opt.name, values: Array.from(vals) };
+    });
+
     const basePayload = {
       category_id: categoryId,
       name,
       description: description || null,
       status,
       images: parsedImages,
-      options: parsedOptions,
+      options: optionsPayload,
     };
 
     const variantsPayload = variants.map((v, i) => ({
@@ -650,20 +659,15 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
                   )}
                 </div>
 
-                {/* URL input */}
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Input
-                    value={image.imageUrl}
-                    onChange={(e) =>
-                      setImages((current) =>
-                        current.map((item, i) =>
-                          i === index ? { ...item, imageUrl: e.target.value, previewUrl: undefined } : item
-                        )
-                      )
-                    }
-                    placeholder="https://example.com/photo.jpg  (or upload above)"
-                    className="h-9 font-mono text-xs"
-                  />
+                {/* Image Status */}
+                <div className="flex flex-1 flex-col justify-center px-2">
+                  {image.imageUrl ? (
+                    <p className="text-xs text-muted-foreground truncate" title={image.imageUrl}>
+                      {image.imageUrl.split('/').pop() || 'Uploaded image'}
+                    </p>
+                  ) : !image.isUploading && !image.uploadError ? (
+                    <p className="text-xs text-muted-foreground">Click the thumbnail icon to upload</p>
+                  ) : null}
                   {image.uploadError && (
                     <p className="text-xs text-destructive">{image.uploadError}</p>
                   )}
@@ -709,7 +713,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
 
         {images.length === 0 && (
           <p className="text-center text-sm text-muted-foreground">
-            No images yet — drag &amp; drop files above or add a row to paste a URL.
+            No images yet — drag &amp; drop files above to upload.
           </p>
         )}
       </Section>
@@ -926,6 +930,9 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
                             <SelectValue placeholder={`Select ${option.name}`} />
                           </SelectTrigger>
                           <SelectContent>
+                            {!option.values.some(v => v.toLowerCase() === 'all') && (
+                              <SelectItem value="All">All</SelectItem>
+                            )}
                             {option.values.map((val) => (
                               <SelectItem key={val} value={val}>
                                 {val}

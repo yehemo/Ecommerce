@@ -10,7 +10,6 @@ const navLinks = [
   { label: 'Women',       href: '/store/women' },
   { label: 'Men',         href: '/store/men' },
   { label: 'Kids',        href: '/store/kids' },
-  { label: 'Sale',        href: '/store/sale' },
 ];
 
 export function Header() {

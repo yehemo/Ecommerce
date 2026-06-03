@@ -66,9 +66,9 @@ function EmptyState() {
   );
 }
 
-export function ProductsGrid() {
+export function ProductsGrid({ queryString = 'per_page=12&status=active' }: { queryString?: string }) {
   const { data, error, isLoading } = useSWR(
-    '/api/products?per_page=12&status=active',
+    `/api/products?${queryString}`,
     fetcher,
     { revalidateOnFocus: false }
   );
