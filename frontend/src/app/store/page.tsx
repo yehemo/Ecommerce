@@ -91,13 +91,13 @@ export default function StorePage() {
 
           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
             <Link
-              href="/store/new-arrivals"
+              href="/store/newarrival"
               className="px-8 py-3.5 bg-white text-black text-sm font-medium tracking-[0.1em] uppercase rounded-full hover:bg-stone-100 transition-colors"
             >
               Shop Now
             </Link>
             <Link
-              href="/store/sale"
+              href="#featured-pieces"
               className="px-8 py-3.5 border border-stone-600 text-stone-300 text-sm font-medium tracking-[0.1em] uppercase rounded-full hover:border-stone-400 hover:text-white transition-colors"
             >
               View Sale
@@ -158,7 +158,7 @@ export default function StorePage() {
       </section>
 
       {/* ── Featured Products (from API) ── */}
-      <section className="bg-stone-50 py-20">
+      <section id="featured-pieces" className="bg-stone-50 py-20">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-light tracking-[0.2em] uppercase text-stone-900">Featured Pieces</h2>
@@ -171,7 +171,7 @@ export default function StorePage() {
 
           <div className="text-center mt-12">
             <Link
-              href="/store/new-arrivals"
+              href="/store/newarrival"
               className="inline-block px-8 py-3 border border-stone-300 text-stone-700 text-sm font-medium tracking-[0.1em] uppercase rounded-full hover:border-stone-900 hover:text-stone-900 transition-colors"
             >
               View All Products

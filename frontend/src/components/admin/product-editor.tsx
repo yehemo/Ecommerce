@@ -72,6 +72,7 @@ type Product = {
   name: string;
   description: string | null;
   status: string;
+  is_new_arrival?: boolean;
   variants: ProductVariant[];
   option_types: ProductOptionType[];
   images: ProductImage[];
@@ -185,6 +186,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('active');
+  const [isNewArrival, setIsNewArrival] = useState('false');
   const [options, setOptions] = useState<OptionDraft[]>([]);
   const [variants, setVariants] = useState<VariantDraft[]>([emptyVariant()]);
   const [images, setImages] = useState<ImageDraft[]>([]);
@@ -212,6 +214,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
           setName(payload.name);
           setDescription(payload.description ?? '');
           setStatus(payload.status);
+          setIsNewArrival(payload.is_new_arrival ? 'true' : 'false');
           setOptions(
             payload.option_types.length
               ? payload.option_types.map((ot) => ({
@@ -373,6 +376,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
       name,
       description: description || null,
       status,
+      is_new_arrival: isNewArrival === 'true',
       images: parsedImages,
       options: optionsPayload,
     };
@@ -563,6 +567,20 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
               </SelectContent>
             </Select>
             {errors.status && <p className="text-xs text-destructive">{errors.status[0]}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="product-new-arrival">New Arrival Collection</Label>
+            <Select value={isNewArrival} onValueChange={setIsNewArrival}>
+              <SelectTrigger id="product-new-arrival" className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Yes, show in New Arrivals</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.is_new_arrival && <p className="text-xs text-destructive">{errors.is_new_arrival[0]}</p>}
           </div>
         </div>
       </Section>
