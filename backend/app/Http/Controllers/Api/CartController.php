@@ -13,7 +13,7 @@ class CartController extends Controller
     {
         $cart = Cart::query()
             ->with([
-                'items.productVariant.product',
+                'items.productVariant.product.images',
                 'items.productVariant.optionValues.optionType',
             ])
             ->firstOrCreate([

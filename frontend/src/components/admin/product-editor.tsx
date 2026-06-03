@@ -405,6 +405,51 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
     );
   };
 
+  const handleGenerateVariants = () => {
+    if (!parsedOptions.length) return;
+
+    const cartesian = (arrays: string[][]): string[][] => {
+      return arrays.reduce<string[][]>((a, b) =>
+        a.flatMap(d => b.map(e => [...d, e])),
+        [[]]
+      );
+    };
+
+    const optionNames = parsedOptions.map(o => o.name);
+    const optionValuesArrays = parsedOptions.map(o => o.values);
+    const combinations = cartesian(optionValuesArrays);
+    
+    setVariants((current) => {
+      const newVariants = [...current];
+      
+      combinations.forEach(combo => {
+        const selections = Object.fromEntries(combo.map((val, i) => [optionNames[i], val]));
+        
+        const exists = current.some(v => 
+          Object.keys(selections).length > 0 &&
+          Object.entries(selections).every(([k, val]) => v.selections[k] === val)
+        );
+
+        if (!exists) {
+          newVariants.push({
+            key: crypto.randomUUID(),
+            priceMinor: current[0]?.priceMinor || '',
+            stockQty: current[0]?.stockQty || '10',
+            status: 'active',
+            selections,
+          });
+        }
+      });
+      
+      // Optionally remove empty initial variant if generating for the first time
+      if (newVariants.length > 1 && newVariants[0].priceMinor === '' && Object.keys(newVariants[0].selections).length === 0) {
+        newVariants.shift();
+      }
+      
+      return newVariants;
+    });
+  };
+
   // ── Loading state ─────────────────────────────────────────────────────────
 
   if (isBootstrapping) {
@@ -708,19 +753,49 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Values (comma-separated)</Label>
-                  <Input
-                    value={option.valuesText}
-                    onChange={(e) =>
-                      setOptions((current) =>
-                        current.map((item, i) =>
-                          i === index ? { ...item, valuesText: e.target.value } : item
-                        )
-                      )
-                    }
-                    placeholder="Black, Cream, Olive"
-                    className="h-9"
-                  />
+                  <Label className="text-xs text-muted-foreground">Values (press Enter to add)</Label>
+                  <div className="flex flex-wrap gap-1.5 p-1.5 border border-input rounded-md min-h-[36px] bg-background focus-within:ring-1 focus-within:ring-ring">
+                    {option.valuesText.split(',').map(v => v.trim()).filter(Boolean).map((val, vIdx) => (
+                      <span key={vIdx} className="inline-flex items-center gap-1 bg-stone-100 text-stone-900 px-2 py-0.5 rounded-sm text-xs font-medium">
+                        {val}
+                        <button type="button" onClick={() => {
+                          const newVals = option.valuesText.split(',').map(v => v.trim()).filter(Boolean);
+                          newVals.splice(vIdx, 1);
+                          setOptions(curr => curr.map((item, i) => i === index ? { ...item, valuesText: newVals.join(', ') } : item));
+                        }} className="text-stone-400 hover:text-stone-900 focus:outline-none">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <input 
+                      type="text"
+                      className="flex-1 min-w-[120px] bg-transparent outline-none text-sm px-1 py-0.5"
+                      placeholder={option.valuesText ? "" : "e.g. Red, Blue"}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                          e.preventDefault();
+                          const val = e.currentTarget.value.trim();
+                          if (val) {
+                            const currentVals = option.valuesText.split(',').map(v => v.trim()).filter(Boolean);
+                            if (!currentVals.includes(val)) {
+                               setOptions(curr => curr.map((item, i) => i === index ? { ...item, valuesText: [...currentVals, val].join(', ') } : item));
+                            }
+                            e.currentTarget.value = '';
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                          const val = e.currentTarget.value.trim();
+                          if (val) {
+                            const currentVals = option.valuesText.split(',').map(v => v.trim()).filter(Boolean);
+                            if (!currentVals.includes(val)) {
+                               setOptions(curr => curr.map((item, i) => i === index ? { ...item, valuesText: [...currentVals, val].join(', ') } : item));
+                            }
+                            e.currentTarget.value = '';
+                          }
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="flex items-end">
                   <Button
@@ -748,15 +823,28 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
         label="Variants"
         title="Sellable SKUs"
         action={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setVariants((current) => [...current, emptyVariant()])}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add variant
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateVariants}
+              disabled={parsedOptions.length === 0}
+              className="bg-stone-50"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Generate combinations
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setVariants((current) => [...current, emptyVariant()])}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add variant
+            </Button>
+          </div>
         }
       >
         <div className="space-y-4">

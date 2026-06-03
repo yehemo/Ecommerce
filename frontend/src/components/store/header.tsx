@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useCart } from '@/components/store/cart-provider';
 
 const navLinks = [
   { label: 'New Arrivals', href: '/store/newarrival' },
@@ -15,6 +16,7 @@ const navLinks = [
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth({});
+  const { cartCount } = useCart();
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-stone-100">
@@ -63,9 +65,11 @@ export function Header() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
             {/* Cart badge */}
-            <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-black text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
-              0
-            </span>
+            {cartCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-black text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                {cartCount}
+              </span>
+            )}
           </Link>
 
           {/* Auth Actions */}

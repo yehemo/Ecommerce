@@ -107,7 +107,7 @@ class CartItemController extends Controller
     {
         return $cartItem->load([
             'cart',
-            'productVariant.product',
+            'productVariant.product.images',
             'productVariant.optionValues.optionType',
         ]);
     }
