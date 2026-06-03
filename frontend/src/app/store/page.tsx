@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { NewsletterForm } from '@/components/store/newsletter-form';
 import { ProductsGrid } from '@/components/store/products-grid';
@@ -8,10 +9,17 @@ export const metadata: Metadata = {
   description: 'Discover the latest fashion trends at LYH. Shop Women, Men, and Kids collections with free shipping on orders over $100.',
 };
 
-const categories = [
-  { label: 'Women', href: '/store/women', bg: 'bg-stone-100', textColor: 'text-stone-900' },
-  { label: 'Men',   href: '/store/men',   bg: 'bg-zinc-900',  textColor: 'text-white' },
-  { label: 'Kids',  href: '/store/kids',  bg: 'bg-stone-200', textColor: 'text-stone-900' },
+type Category = {
+  label: string;
+  href: string;
+  image: string;
+  textColor?: string;
+};
+
+const categories: Category[] = [
+  { label: 'Women', href: '/store/women', image: '/category/women.jpg' },
+  { label: 'Men', href: '/store/men', image: '/category/men.jpg' },
+  { label: 'Kids', href: '/store/kids', image: '/category/kidv2.jpg' },
 ];
 
 const perks = [
@@ -108,16 +116,42 @@ export default function StorePage() {
           <div className="w-8 h-px bg-stone-300 mx-auto mt-4" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {categories.map((cat) => (
+          {categories.map((category) => (
             <Link
-              key={cat.label}
-              href={cat.href}
-              className={`group relative flex items-center justify-center h-64 rounded-2xl overflow-hidden ${cat.bg} transition-all duration-300 hover:scale-[1.02]`}
+              key={category.label}
+              href={category.href}
+              className="group relative block cursor-pointer w-full"
             >
-              <span className={`text-2xl font-light tracking-[0.3em] uppercase ${cat.textColor} group-hover:tracking-[0.4em] transition-all duration-300`}>
-                {cat.label}
-              </span>
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+              <div className="relative overflow-hidden aspect-[1/1.3] md:aspect-[3/4]">
+                <Image
+                  src={category.image}
+                  alt={category.label}
+                  fill
+                  className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
+                
+                {/* Subtle overlay (darken on hover) */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors duration-500 z-10" />
+                
+                {/* Dark gradient vignette at the bottom for text readability */}
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/50 via-black/30 to-transparent z-[15]" />
+              
+                <div className="absolute inset-x-0 bottom-0 z-20 p-6 md:p-8 flex flex-col justify-end text-white">
+                  <h3
+                    className="text-3xl md:text-4xl font-normal"
+                    style={{ fontFamily: "var(--font-serif)" }}
+                  >
+                    {category.label}
+                  </h3>
+                  <span
+                    className="text-[10px] tracking-[0.25em] uppercase text-white/80 mt-1.5"
+                    style={{ fontFamily: "var(--font-sans)" }}
+                  >
+                    Shop Collection
+                  </span>
+                </div>
+              </div>
             </Link>
           ))}
         </div>
