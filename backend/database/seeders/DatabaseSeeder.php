@@ -25,10 +25,10 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
             'role' => UserRole::CUSTOMER,
         ]);
-        User::factory(5)->create();
 
         $this->call([
             CategorySeeder::class,
+            ProductSeeder::class,
         ]);
     }
 }
