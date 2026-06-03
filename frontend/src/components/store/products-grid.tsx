@@ -20,6 +20,7 @@ type Product = {
     name: string;
   } | null;
   variants?: ProductVariant[];
+  images?: { image_url: string }[];
 };
 
 type ProductsApiResponse = {
@@ -108,13 +109,21 @@ export function ProductsGrid() {
             key={product.id}
             className="group bg-white rounded-xl overflow-hidden border border-stone-100 hover:shadow-md transition-shadow duration-300"
           >
-            {/* Product image placeholder */}
+            {/* Product image */}
             <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-12 h-12 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+              {product.images && product.images.length > 0 ? (
+                <img
+                  src={product.images[0].image_url}
+                  alt={product.name}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-12 h-12 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
 
               {isOutOfStock && (
                 <span className="absolute top-3 left-3 text-[10px] font-semibold tracking-[0.15em] uppercase px-2.5 py-1 rounded-full bg-stone-200 text-stone-600">

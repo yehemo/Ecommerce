@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CartItemController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ImageUploadController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductOptionTypeController;
 use App\Http\Controllers\Api\ProductOptionValueController;
@@ -43,6 +44,8 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('/products', [ProductController::class, 'store']);
     Route::match(['put', 'patch'], '/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+
+    Route::post('/upload-image', [ImageUploadController::class, 'store']);
 
     Route::apiResource('option-types', ProductOptionTypeController::class)->except(['index', 'show']);
     Route::apiResource('option-values', ProductOptionValueController::class)->except(['index', 'show']);

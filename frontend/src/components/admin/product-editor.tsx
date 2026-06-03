@@ -3,6 +3,30 @@
 import axios from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import { Loader2, Plus, Trash2, Upload, ImageIcon, X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardAction,
+} from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Category = {
   id: string;
@@ -78,9 +102,14 @@ type ImageDraft = {
   id?: string;
   imageUrl: string;
   sortOrder: string;
+  isUploading?: boolean;
+  uploadError?: string;
+  previewUrl?: string;
 };
 
 type ApiValidationErrors = Record<string, string[]>;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const emptyVariant = (): VariantDraft => ({
   key: crypto.randomUUID(),
@@ -104,6 +133,49 @@ const slugPart = (value: string) =>
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-');
 
+// ─── Upload helper ────────────────────────────────────────────────────────────
+
+async function uploadImageFile(file: File): Promise<string> {
+  await axios.get('/sanctum/csrf-cookie');
+  const form = new FormData();
+  form.append('image', file);
+  const res = await axios.post('/api/upload-image', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.url as string;
+}
+
+// ─── Section wrapper ─────────────────────────────────────────────────────────
+
+function Section({
+  label,
+  title,
+  action,
+  children,
+}: {
+  label: string;
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-muted-foreground">
+            {label}
+          </p>
+          <CardTitle className="mt-1 text-lg">{title}</CardTitle>
+        </div>
+        {action && <CardAction>{action}</CardAction>}
+      </CardHeader>
+      <CardContent className="pt-5">{children}</CardContent>
+    </Card>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export function ProductEditor({ mode, productId }: ProductEditorProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -115,13 +187,14 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
   const [status, setStatus] = useState('active');
   const [options, setOptions] = useState<OptionDraft[]>([]);
   const [variants, setVariants] = useState<VariantDraft[]>([emptyVariant()]);
-  const [images, setImages] = useState<ImageDraft[]>([emptyImage()]);
+  const [images, setImages] = useState<ImageDraft[]>([]);
   const [errors, setErrors] = useState<ApiValidationErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
+
   useEffect(() => {
     let mounted = true;
-
     const load = async () => {
       try {
         const [categoryResponse, productResponse] = await Promise.all([
@@ -135,35 +208,29 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
 
         if (productResponse) {
           const payload = productResponse.data.data as Product;
-
           setCategoryId(payload.category_id);
           setName(payload.name);
           setDescription(payload.description ?? '');
           setStatus(payload.status);
           setOptions(
             payload.option_types.length
-              ? payload.option_types.map((optionType) => ({
-                  key: optionType.id,
-                  name: optionType.name,
-                  valuesText: optionType.values.map((value) => value.value).join(', '),
+              ? payload.option_types.map((ot) => ({
+                  key: ot.id,
+                  name: ot.name,
+                  valuesText: ot.values.map((v) => v.value).join(', '),
                 }))
               : []
           );
           setVariants(
             payload.variants.length
-              ? payload.variants.map((variant) => ({
-                  key: variant.id,
-                  id: variant.id,
-                  priceMinor: String(variant.price_minor),
-                  stockQty: String(variant.stock_qty),
-                  status: variant.status,
-                  selections: (variant.option_values ?? []).reduce<Record<string, string>>((carry, optionValue) => {
-                    const optionTypeName = optionValue.option_type?.name;
-
-                    if (optionTypeName) {
-                      carry[optionTypeName] = optionValue.value;
-                    }
-
+              ? payload.variants.map((v) => ({
+                  key: v.id,
+                  id: v.id,
+                  priceMinor: String(v.price_minor),
+                  stockQty: String(v.stock_qty),
+                  status: v.status,
+                  selections: (v.option_values ?? []).reduce<Record<string, string>>((carry, ov) => {
+                    if (ov.option_type?.name) carry[ov.option_type.name] = ov.value;
                     return carry;
                   }, {}),
                 }))
@@ -172,67 +239,120 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
           setImages(
             payload.images.length
               ? payload.images
-                  .sort((left, right) => left.sort_order - right.sort_order)
-                  .map((image) => ({
-                    key: image.id,
-                    id: image.id,
-                    imageUrl: image.image_url,
-                    sortOrder: String(image.sort_order),
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map((img) => ({
+                    key: img.id,
+                    id: img.id,
+                    imageUrl: img.image_url,
+                    sortOrder: String(img.sort_order),
                   }))
-              : [emptyImage()]
+              : []
           );
         }
       } catch {
-        if (mounted) {
-          setFormError('Failed to load product data.');
-        }
+        if (mounted) setFormError('Failed to load product data.');
       } finally {
-        if (mounted) {
-          setIsBootstrapping(false);
-        }
+        if (mounted) setIsBootstrapping(false);
       }
     };
-
     load();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [mode, productId]);
+
+  // ── Derived ───────────────────────────────────────────────────────────────
 
   const parsedOptions = useMemo(
     () =>
       options
-        .map((option) => ({
-          name: option.name.trim(),
-          values: option.valuesText
+        .map((o) => ({
+          name: o.name.trim(),
+          values: o.valuesText
             .split(',')
-            .map((value) => value.trim())
+            .map((v) => v.trim())
             .filter(Boolean),
         }))
-        .filter((option) => option.name && option.values.length),
+        .filter((o) => o.name && o.values.length),
     [options]
   );
 
   const parsedImages = useMemo(
     () =>
       images
-        .map((image) => ({
-          image_url: image.imageUrl.trim(),
-          sort_order: Number(image.sortOrder || 0),
+        .map((img) => ({
+          image_url: img.imageUrl.trim(),
+          sort_order: Number(img.sortOrder || 0),
         }))
-        .filter((image) => image.image_url),
+        .filter((img) => img.image_url),
     [images]
   );
 
   const buildVariantSku = (variant: VariantDraft, index: number) => {
     const base = slugPart(name) || 'PRODUCT';
     const selectionParts = parsedOptions
-      .map((option) => slugPart(variant.selections[option.name] ?? ''))
+      .map((o) => slugPart(variant.selections[o.name] ?? ''))
       .filter(Boolean);
-
     return [base, ...selectionParts, String(index + 1)].join('-');
   };
+
+  // ── Upload helpers ────────────────────────────────────────────────────────
+
+  const handleFilesAdded = (files: File[]) => {
+    const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+    if (!imageFiles.length) return;
+
+    imageFiles.forEach(async (file) => {
+      const draftKey = crypto.randomUUID();
+      const preview = URL.createObjectURL(file);
+
+      setImages((current) => {
+        const nonEmpty = current.filter((img) => img.imageUrl !== '' || img.isUploading);
+        return [
+          ...nonEmpty,
+          { key: draftKey, imageUrl: '', sortOrder: String(nonEmpty.length), isUploading: true, previewUrl: preview },
+        ];
+      });
+
+      try {
+        const url = await uploadImageFile(file);
+        setImages((current) =>
+          current.map((img) =>
+            img.key === draftKey ? { ...img, imageUrl: url, isUploading: false } : img
+          )
+        );
+      } catch {
+        setImages((current) =>
+          current.map((img) =>
+            img.key === draftKey
+              ? { ...img, isUploading: false, uploadError: 'Upload failed — try pasting a URL instead.' }
+              : img
+          )
+        );
+      }
+    });
+  };
+
+  const handleReplaceFile = async (imageKey: string, file: File) => {
+    const preview = URL.createObjectURL(file);
+    setImages((current) =>
+      current.map((img) =>
+        img.key === imageKey ? { ...img, isUploading: true, previewUrl: preview, uploadError: undefined } : img
+      )
+    );
+    try {
+      const url = await uploadImageFile(file);
+      setImages((current) =>
+        current.map((img) => (img.key === imageKey ? { ...img, imageUrl: url, isUploading: false } : img))
+      );
+    } catch {
+      setImages((current) =>
+        current.map((img) =>
+          img.key === imageKey ? { ...img, isUploading: false, uploadError: 'Upload failed.' } : img
+        )
+      );
+    }
+  };
+
+  // ── Save ──────────────────────────────────────────────────────────────────
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -248,32 +368,22 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
       options: parsedOptions,
     };
 
-    const variantsPayload = variants.map((variant, index) => ({
-      ...(variant.id ? { id: variant.id } : {}),
-      sku: buildVariantSku(variant, index),
-      price_minor: Number(variant.priceMinor),
-      stock_qty: Number(variant.stockQty),
-      status: variant.status,
-      options: Object.fromEntries(
-        Object.entries(variant.selections).filter(([, value]) => value)
-      ),
+    const variantsPayload = variants.map((v, i) => ({
+      ...(v.id ? { id: v.id } : {}),
+      sku: buildVariantSku(v, i),
+      price_minor: Number(v.priceMinor),
+      stock_qty: Number(v.stockQty),
+      status: v.status,
+      options: Object.fromEntries(Object.entries(v.selections).filter(([, val]) => val)),
     }));
 
     try {
       await axios.get('/sanctum/csrf-cookie');
-
       if (mode === 'create') {
-        await axios.post('/api/products', {
-          ...basePayload,
-          variants: variantsPayload,
-        });
+        await axios.post('/api/products', { ...basePayload, variants: variantsPayload });
       } else {
-        await axios.patch(`/api/products/${productId}`, {
-          ...basePayload,
-          variants: variantsPayload,
-        });
+        await axios.patch(`/api/products/${productId}`, { ...basePayload, variants: variantsPayload });
       }
-
       startTransition(() => {
         router.push('/admin/products');
         router.refresh();
@@ -283,369 +393,497 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
         setErrors(error.response.data.errors ?? {});
         return;
       }
-
       setFormError('Unable to save the product right now.');
     }
   };
 
   const updateVariantSelection = (variantKey: string, optionName: string, value: string) => {
     setVariants((current) =>
-      current.map((variant) =>
-        variant.key === variantKey
-          ? {
-              ...variant,
-              selections: {
-                ...variant.selections,
-                [optionName]: value,
-              },
-            }
-          : variant
+      current.map((v) =>
+        v.key === variantKey ? { ...v, selections: { ...v.selections, [optionName]: value } } : v
       )
     );
   };
 
+  // ── Loading state ─────────────────────────────────────────────────────────
+
   if (isBootstrapping) {
-    return <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-8 text-stone-300">Loading editor…</div>;
+    return (
+      <div className="flex items-center justify-center py-24 text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Loading editor…
+      </div>
+    );
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
-    <form onSubmit={save} className="space-y-6">
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-        <div className="flex flex-col gap-3 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">
-              {mode === 'create' ? 'New Product' : 'Edit Product'}
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold text-white">
-              {mode === 'create' ? 'Add a catalog item' : 'Refine the product details'}
-            </h2>
-          </div>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-stone-200 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPending ? 'Saving…' : mode === 'create' ? 'Create product' : 'Save changes'}
-          </button>
+    <form onSubmit={save} className="space-y-5">
+
+      {/* ── Header row ───────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-muted-foreground">
+            {mode === 'create' ? 'New product' : 'Edit product'}
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+            {mode === 'create' ? 'Add a catalog item' : 'Refine product details'}
+          </h2>
         </div>
+        <Button type="submit" disabled={isPending} size="lg">
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isPending ? 'Saving…' : mode === 'create' ? 'Create product' : 'Save changes'}
+        </Button>
+      </div>
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <label className="space-y-2 text-sm text-stone-300">
-            <span>Product name</span>
-            <input
+      {/* ── Basic info ───────────────────────────────────────────────────── */}
+      <Section label="Details" title="Basic information">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="product-name">Product name</Label>
+            <Input
+              id="product-name"
               value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
+              onChange={(e) => setName(e.target.value)}
               placeholder="Essential Hoodie"
+              className="h-10"
             />
-            {errors.name && <p className="text-sm text-red-300">{errors.name[0]}</p>}
-          </label>
+            {errors.name && <p className="text-xs text-destructive">{errors.name[0]}</p>}
+          </div>
 
-          <label className="space-y-2 text-sm text-stone-300">
-            <span>Category</span>
-            <select
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-            >
-              <option value="">Select category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            {errors.category_id && <p className="text-sm text-red-300">{errors.category_id[0]}</p>}
-          </label>
+          <div className="space-y-2">
+            <Label htmlFor="product-category">Category</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger id="product-category" className="h-10 w-full">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.category_id && <p className="text-xs text-destructive">{errors.category_id[0]}</p>}
+          </div>
 
-          <label className="space-y-2 text-sm text-stone-300 md:col-span-2">
-            <span>Description</span>
-            <textarea
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="product-description">Description</Label>
+            <Textarea
+              id="product-description"
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              rows={5}
-              className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
               placeholder="Describe the product, materials, and fit."
             />
-            {errors.description && <p className="text-sm text-red-300">{errors.description[0]}</p>}
-          </label>
-
-          <label className="space-y-2 text-sm text-stone-300">
-            <span>Status</span>
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="draft">Draft</option>
-            </select>
-            {errors.status && <p className="text-sm text-red-300">{errors.status[0]}</p>}
-          </label>
-        </div>
-      </section>
-
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">Options</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Variant dimensions</h3>
+            {errors.description && <p className="text-xs text-destructive">{errors.description[0]}</p>}
           </div>
-          <button
+
+          <div className="space-y-2">
+            <Label htmlFor="product-status">Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="product-status" className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Active
+                  </span>
+                </SelectItem>
+                <SelectItem value="inactive">
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                    Inactive
+                  </span>
+                </SelectItem>
+                <SelectItem value="draft">
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
+                    Draft
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.status && <p className="text-xs text-destructive">{errors.status[0]}</p>}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Images ───────────────────────────────────────────────────────── */}
+      <Section
+        label="Media"
+        title="Product images"
+        action={
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setImages((current) => [...current, emptyImage()])}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add row
+          </Button>
+        }
+      >
+        {/* Drop zone */}
+        <div
+          className="mb-5 flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-center transition hover:border-ring hover:bg-muted/50"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            handleFilesAdded(Array.from(e.dataTransfer.files));
+          }}
+          onClick={() => document.getElementById('bulk-image-input')?.click()}
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border bg-background">
+            <Upload className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Drag &amp; drop images here</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              or click to browse — JPG, PNG, WebP, GIF up to 5 MB each
+            </p>
+          </div>
+          <input
+            id="bulk-image-input"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              handleFilesAdded(Array.from(e.target.files ?? []));
+              e.target.value = '';
+            }}
+          />
+        </div>
+
+        {/* Image rows */}
+        {images.length > 0 && (
+          <div className="space-y-3">
+            {images.map((image, index) => (
+              <div
+                key={image.key}
+                className="flex items-center gap-3 rounded-xl border bg-card p-3"
+              >
+                {/* Thumbnail */}
+                <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border bg-muted">
+                  {image.isUploading ? (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : image.previewUrl || image.imageUrl ? (
+                    <img
+                      src={image.previewUrl || image.imageUrl}
+                      alt={`Image ${index + 1}`}
+                      className="h-full w-full object-cover"
+                      onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                    </div>
+                  )}
+                  {/* Replace-file overlay */}
+                  {!image.isUploading && (
+                    <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/0 opacity-0 transition hover:bg-black/50 hover:opacity-100">
+                      <Upload className="h-4 w-4 text-white" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = '';
+                          if (file) handleReplaceFile(image.key, file);
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* URL input */}
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Input
+                    value={image.imageUrl}
+                    onChange={(e) =>
+                      setImages((current) =>
+                        current.map((item, i) =>
+                          i === index ? { ...item, imageUrl: e.target.value, previewUrl: undefined } : item
+                        )
+                      )
+                    }
+                    placeholder="https://example.com/photo.jpg  (or upload above)"
+                    className="h-9 font-mono text-xs"
+                  />
+                  {image.uploadError && (
+                    <p className="text-xs text-destructive">{image.uploadError}</p>
+                  )}
+                  {image.isUploading && (
+                    <p className="animate-pulse text-xs text-muted-foreground">Uploading…</p>
+                  )}
+                </div>
+
+                {/* Sort order */}
+                <div className="w-16 flex-shrink-0">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={image.sortOrder}
+                    onChange={(e) =>
+                      setImages((current) =>
+                        current.map((item, i) =>
+                          i === index ? { ...item, sortOrder: e.target.value } : item
+                        )
+                      )
+                    }
+                    className="h-9 text-center text-sm"
+                    title="Sort order"
+                  />
+                </div>
+
+                {/* Remove */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    setImages((current) => current.filter((item) => item.key !== image.key))
+                  }
+                  className="flex-shrink-0 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {images.length === 0 && (
+          <p className="text-center text-sm text-muted-foreground">
+            No images yet — drag &amp; drop files above or add a row to paste a URL.
+          </p>
+        )}
+      </Section>
+
+      {/* ── Options ──────────────────────────────────────────────────────── */}
+      <Section
+        label="Options"
+        title="Variant dimensions"
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() =>
               setOptions((current) => [...current, { key: crypto.randomUUID(), name: '', valuesText: '' }])
             }
-            className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
           >
+            <Plus className="h-3.5 w-3.5" />
             Add option
-          </button>
-        </div>
-
-        <div className="mt-6 space-y-4">
-          {options.length ? (
-            options.map((option, index) => (
-              <div key={option.key} className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-stone-950/60 p-5 md:grid-cols-[1fr_2fr_auto]">
-                <label className="space-y-2 text-sm text-stone-300">
-                  <span>Option name</span>
-                  <input
+          </Button>
+        }
+      >
+        {options.length ? (
+          <div className="space-y-3">
+            {options.map((option, index) => (
+              <div
+                key={option.key}
+                className="grid gap-3 rounded-xl border bg-muted/20 p-4 md:grid-cols-[1fr_2fr_auto]"
+              >
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Option name</Label>
+                  <Input
                     value={option.name}
-                    onChange={(event) =>
+                    onChange={(e) =>
                       setOptions((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, name: event.target.value } : item
-                        )
+                        current.map((item, i) => (i === index ? { ...item, name: e.target.value } : item))
                       )
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
                     placeholder="Color"
+                    className="h-9"
                   />
-                </label>
-                <label className="space-y-2 text-sm text-stone-300">
-                  <span>Values</span>
-                  <input
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Values (comma-separated)</Label>
+                  <Input
                     value={option.valuesText}
-                    onChange={(event) =>
+                    onChange={(e) =>
                       setOptions((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, valuesText: event.target.value } : item
+                        current.map((item, i) =>
+                          i === index ? { ...item, valuesText: e.target.value } : item
                         )
                       )
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
                     placeholder="Black, Cream, Olive"
+                    className="h-9"
                   />
-                </label>
+                </div>
                 <div className="flex items-end">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setOptions((current) => current.filter((item) => item.key !== option.key))}
-                    className="w-full rounded-full border border-red-500/30 px-4 py-3 text-sm font-medium text-red-200 transition hover:border-red-400 hover:text-red-100"
+                    className="text-muted-foreground hover:text-destructive"
                   >
-                    Remove
-                  </button>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-            ))
-          ) : (
-            <p className="text-sm text-stone-400">Add options if the product has variant dimensions like color or size.</p>
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">Images</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Product image URLs</h3>
+            ))}
           </div>
-          <button
-            type="button"
-            onClick={() => setImages((current) => [...current, emptyImage()])}
-            className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
-          >
-            Add image
-          </button>
-        </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Add options if the product has variant dimensions like color or size.
+          </p>
+        )}
+      </Section>
 
-        <div className="mt-6 space-y-4">
-          {images.map((image, index) => (
-            <div key={image.key} className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-stone-950/60 p-5 md:grid-cols-[2fr_140px_auto]">
-              <label className="space-y-2 text-sm text-stone-300">
-                <span>Image URL</span>
-                <input
-                  value={image.imageUrl}
-                  onChange={(event) =>
-                    setImages((current) =>
-                      current.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, imageUrl: event.target.value } : item
-                      )
-                    )
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-                  placeholder="https://example.com/product-front.jpg"
-                />
-              </label>
-              <label className="space-y-2 text-sm text-stone-300">
-                <span>Sort order</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={image.sortOrder}
-                  onChange={(event) =>
-                    setImages((current) =>
-                      current.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, sortOrder: event.target.value } : item
-                      )
-                    )
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-                />
-              </label>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setImages((current) =>
-                      current.length === 1 ? [emptyImage()] : current.filter((item) => item.key !== image.key)
-                    )
-                  }
-                  className="w-full rounded-full border border-red-500/30 px-4 py-3 text-sm font-medium text-red-200 transition hover:border-red-400 hover:text-red-100"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500">Variants</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">Sellable SKUs</h3>
-          </div>
-          <button
+      {/* ── Variants ─────────────────────────────────────────────────────── */}
+      <Section
+        label="Variants"
+        title="Sellable SKUs"
+        action={
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setVariants((current) => [...current, emptyVariant()])}
-            className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
           >
+            <Plus className="h-3.5 w-3.5" />
             Add variant
-          </button>
-        </div>
-
-        <div className="mt-6 space-y-5">
+          </Button>
+        }
+      >
+        <div className="space-y-4">
           {variants.map((variant, index) => (
-            <div key={variant.key} className="rounded-[1.75rem] border border-white/10 bg-stone-950/60 p-5">
-              <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-300">Generated SKU</p>
-                <p className="mt-2 break-all text-sm font-semibold text-white">{buildVariantSku(variant, index)}</p>
+            <div key={variant.key} className="rounded-xl border bg-muted/20 p-4">
+              {/* Generated SKU badge */}
+              <div className="mb-4 flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">SKU</span>
+                <Badge variant="secondary" className="font-mono text-xs">
+                  {buildVariantSku(variant, index)}
+                </Badge>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <label className="space-y-2 text-sm text-stone-300">
-                  <span>Price (minor units)</span>
-                  <input
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Price (minor units)</Label>
+                  <Input
                     type="number"
                     min="0"
                     value={variant.priceMinor}
-                    onChange={(event) =>
+                    onChange={(e) =>
                       setVariants((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, priceMinor: event.target.value } : item
-                        )
+                        current.map((item, i) => (i === index ? { ...item, priceMinor: e.target.value } : item))
                       )
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
                     placeholder="12999"
+                    className="h-9"
                   />
-                </label>
-                <label className="space-y-2 text-sm text-stone-300">
-                  <span>Stock quantity</span>
-                  <input
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Stock quantity</Label>
+                  <Input
                     type="number"
                     min="0"
                     value={variant.stockQty}
-                    onChange={(event) =>
+                    onChange={(e) =>
                       setVariants((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, stockQty: event.target.value } : item
-                        )
+                        current.map((item, i) => (i === index ? { ...item, stockQty: e.target.value } : item))
                       )
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
                     placeholder="25"
+                    className="h-9"
                   />
-                </label>
-                <label className="space-y-2 text-sm text-stone-300">
-                  <span>Variant status</span>
-                  <select
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Variant status</Label>
+                  <Select
                     value={variant.status}
-                    onChange={(event) =>
+                    onValueChange={(val) =>
                       setVariants((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, status: event.target.value } : item
-                        )
+                        current.map((item, i) => (i === index ? { ...item, status: val } : item))
                       )
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
                   >
-                    <option value="active">Active</option>
-                    <option value="out_of_stock">Out of stock</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </label>
+                    <SelectTrigger className="h-9 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="out_of_stock">Out of stock</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {parsedOptions.length ? (
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  {parsedOptions.map((option) => (
-                    <label key={option.name} className="space-y-2 text-sm text-stone-300">
-                      <span>{option.name}</span>
-                      <select
-                        value={variant.selections[option.name] ?? ''}
-                        onChange={(event) =>
-                          updateVariantSelection(variant.key, option.name, event.target.value)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-stone-950/70 px-4 py-3 text-white outline-none transition focus:border-white/30"
-                      >
-                        <option value="">Select {option.name}</option>
-                        {option.values.map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-4 text-sm text-stone-400">Add option dimensions above to map selections to each variant.</p>
+              {parsedOptions.length > 0 && (
+                <>
+                  <Separator className="my-4" />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {parsedOptions.map((option) => (
+                      <div key={option.name} className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">{option.name}</Label>
+                        <Select
+                          value={variant.selections[option.name] ?? ''}
+                          onValueChange={(val) => updateVariantSelection(variant.key, option.name, val)}
+                        >
+                          <SelectTrigger className="h-9 w-full">
+                            <SelectValue placeholder={`Select ${option.name}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {option.values.map((val) => (
+                              <SelectItem key={val} value={val}>
+                                {val}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
 
               {variants.length > 1 && (
-                <div className="mt-5 flex justify-end">
-                  <button
+                <div className="mt-4 flex justify-end">
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setVariants((current) => current.filter((item) => item.key !== variant.key))}
-                    className="rounded-full border border-red-500/30 px-4 py-2 text-sm font-medium text-red-200 transition hover:border-red-400 hover:text-red-100"
+                    className="text-muted-foreground hover:text-destructive"
                   >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                     Remove variant
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
+      {/* ── Form-level error ─────────────────────────────────────────────── */}
       {formError && (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {formError}
         </div>
       )}
+
+      {/* ── Bottom save button ───────────────────────────────────────────── */}
+      <div className="flex justify-end pt-2 pb-8">
+        <Button type="submit" disabled={isPending} size="lg">
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isPending ? 'Saving…' : mode === 'create' ? 'Create product' : 'Save changes'}
+        </Button>
+      </div>
     </form>
   );
 }
