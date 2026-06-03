@@ -50,7 +50,8 @@ export const useAuth = ({
       setErrors([]);
       try {
         await axios.post("/login", props);
-        await mutate();
+        const freshUser = await mutate();
+        return freshUser;
       } catch (error: any) {
         if (error.response?.status === 422) {
           setErrors(error.response.data.errors);
@@ -68,7 +69,8 @@ export const useAuth = ({
       setErrors([]);
       try {
         await axios.post("/register", props);
-        await mutate();
+        const freshUser = await mutate();
+        return freshUser;
       } catch (error: any) {
         if (error.response?.status === 422) {
           setErrors(error.response.data.errors);

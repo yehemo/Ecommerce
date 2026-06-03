@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 const navLinks = [
-  { label: 'New Arrivals', href: '/store/new-arrivals' },
+  { label: 'New Arrivals', href: '/store/newarrival' },
   { label: 'Women',       href: '/store/women' },
   { label: 'Men',         href: '/store/men' },
   { label: 'Kids',        href: '/store/kids' },

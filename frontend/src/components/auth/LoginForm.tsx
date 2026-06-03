@@ -2,21 +2,25 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errors, setErrors] = useState<any>([]);
+    const router = useRouter();
 
     const { login, isLoading } = useAuth({
         middleware: 'guest',
-        redirectIfAuthenticated: '/store',
     });
 
     const submitForm = async (event: React.FormEvent) => {
         event.preventDefault();
-        login({ email, password, setErrors });
+        const user = await login({ email, password, setErrors });
+        if (user) {
+            router.push(user.role === 'admin' ? '/admin' : '/store');
+        }
     };
 
     if (isLoading) return <div className="flex justify-center py-4"><span className="text-zinc-500">Loading session...</span></div>;
