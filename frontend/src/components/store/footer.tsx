@@ -25,7 +25,7 @@ export function Footer() {
             className="text-3xl md:text-4xl font-normal tracking-[0.4em] uppercase text-black"
             style={{ fontFamily: "var(--font-serif)" }}
           >
-            LYH
+            CamboShop
           </span>
         </Link>
 
@@ -70,7 +70,7 @@ export function Footer() {
             className="text-[10px] tracking-[0.15em] text-stone-300"
             style={{ fontFamily: "var(--font-sans)" }}
           >
-            © {new Date().getFullYear()} LYH. All rights reserved.
+            © {new Date().getFullYear()} CamboShop. All rights reserved.
           </p>
 
           <div className="flex items-center gap-6">

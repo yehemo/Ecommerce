@@ -27,7 +27,7 @@ export function Header() {
           href="/store"
           className="text-xl font-light tracking-[0.4em] uppercase text-black shrink-0 hover:opacity-70 transition-opacity"
         >
-          LYH
+          CamboShop
         </Link>
 
         {/* Desktop Nav */}
