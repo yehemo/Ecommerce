@@ -165,7 +165,7 @@ export default function StorePage() {
             <div className="w-8 h-px bg-stone-300 mx-auto mt-4" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <ProductsGrid />
           </div>
 

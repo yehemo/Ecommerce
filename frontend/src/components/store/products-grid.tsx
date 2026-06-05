@@ -41,7 +41,7 @@ function ProductCardSkeleton() {
   return (
     <div className="bg-white rounded-xl overflow-hidden border border-stone-100 animate-pulse">
       <div className="aspect-[3/4] bg-stone-100" />
-      <div className="p-4 space-y-2">
+      <div className="p-3 sm:p-4 space-y-2">
         <div className="h-3 bg-stone-100 rounded w-1/3" />
         <div className="h-4 bg-stone-100 rounded w-3/4" />
         <div className="h-4 bg-stone-100 rounded w-1/4" />
@@ -135,7 +135,7 @@ export function ProductsGrid({ queryString = 'per_page=12&status=active' }: { qu
               <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
                 <Link
                   href={`/store/products/${product.id}`}
-                  className="block w-full bg-black text-white text-[11px] font-medium tracking-[0.1em] uppercase py-2.5 rounded-lg hover:bg-stone-800 transition-colors text-center"
+                  className="block w-full bg-black text-white text-[10px] sm:text-[11px] font-medium tracking-[0.08em] sm:tracking-[0.1em] uppercase py-2 sm:py-2.5 rounded-lg hover:bg-stone-800 transition-colors text-center"
                 >
                   View Product
                 </Link>
@@ -143,12 +143,12 @@ export function ProductsGrid({ queryString = 'per_page=12&status=active' }: { qu
             </div>
 
             {/* Product info */}
-            <div className="p-4">
-              <p className="text-[10px] tracking-[0.15em] uppercase text-stone-400 mb-1">
+            <div className="p-3 sm:p-4">
+              <p className="text-[9px] sm:text-[10px] tracking-[0.12em] sm:tracking-[0.15em] uppercase text-stone-400 mb-1">
                 {product.category?.name ?? 'Uncategorized'}
               </p>
-              <h3 className="text-sm font-medium text-stone-900 leading-snug">{product.name}</h3>
-              <p className="mt-1.5 text-sm font-semibold text-stone-900">
+              <h3 className="text-xs sm:text-sm font-medium text-stone-900 leading-snug line-clamp-2">{product.name}</h3>
+              <p className="mt-1 text-xs sm:mt-1.5 sm:text-sm font-semibold text-stone-900">
                 {firstVariant ? formatPrice(firstVariant.price_minor) : '—'}
               </p>
             </div>
