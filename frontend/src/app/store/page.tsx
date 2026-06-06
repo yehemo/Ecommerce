@@ -3,6 +3,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { NewsletterForm } from '@/components/store/newsletter-form';
 import { ProductsGrid } from '@/components/store/products-grid';
+import { StoreSearchResults } from '@/components/store/store-search-results';
 
 export const metadata: Metadata = {
   title: 'LYH — Modern Fashion Store',
@@ -61,7 +62,22 @@ const perks = [
   },
 ];
 
-export default function StorePage() {
+type StorePageProps = {
+  searchParams?: Promise<{
+    search?: string;
+    sort?: string;
+  }>;
+};
+
+export default async function StorePage({ searchParams }: StorePageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const search = resolvedSearchParams?.search?.trim();
+  const sort = resolvedSearchParams?.sort?.trim();
+
+  if (search) {
+    return <StoreSearchResults initialQuery={search} initialSort={sort || 'newest'} />;
+  }
+
   return (
     <div className="flex flex-col">
 

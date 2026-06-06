@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/components/store/cart-provider';
 
@@ -14,8 +15,38 @@ const navLinks = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [desktopSearchOpen, setDesktopSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const { user, logout } = useAuth({});
   const { cartCount } = useCart();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setSearchValue(new URLSearchParams(window.location.search).get('search') || '');
+  }, []);
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const query = searchValue.trim();
+
+    if (!query) {
+      router.push('/store');
+      setDesktopSearchOpen(false);
+      setMenuOpen(false);
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('search', query);
+    router.push(`/store?${params.toString()}`);
+    setDesktopSearchOpen(false);
+    setMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-stone-100">
@@ -30,7 +61,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.label}
@@ -45,14 +76,38 @@ export function Header() {
         {/* Right Actions */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Search icon */}
-          <button
-            aria-label="Search"
-            className="hidden sm:flex p-2 text-stone-500 hover:text-black transition-colors rounded-full hover:bg-stone-100"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-            </svg>
-          </button>
+          <div className="hidden lg:flex items-center gap-2">
+            {desktopSearchOpen && (
+              <form onSubmit={submitSearch} className="flex items-center gap-2">
+                <input
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  placeholder="Search products"
+                  className="h-9 w-44 xl:w-56 rounded-full border border-stone-200 bg-white px-4 text-sm text-stone-700 outline-none transition-colors focus:border-stone-400"
+                />
+              </form>
+            )}
+            <button
+              aria-label="Search"
+              type="button"
+              onClick={() => {
+                if (desktopSearchOpen && searchValue.trim()) {
+                  const params = new URLSearchParams();
+                  params.set('search', searchValue.trim());
+                  router.push(`/store?${params.toString()}`);
+                  setDesktopSearchOpen(false);
+                  return;
+                }
+
+                setDesktopSearchOpen((current) => !current);
+              }}
+              className="p-2 text-stone-500 hover:text-black transition-colors rounded-full hover:bg-stone-100"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+            </button>
+          </div>
 
           {/* Cart icon */}
           <Link
@@ -73,7 +128,7 @@ export function Header() {
 
           {/* Auth Actions */}
           {user ? (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <Link
                 href="/store/orders"
                 className="text-[11px] font-medium tracking-[0.1em] uppercase text-stone-500 hover:text-black transition-colors border border-stone-200 hover:border-stone-400 rounded-full px-3 py-1.5"
@@ -99,7 +154,7 @@ export function Header() {
               </button>
             </div>
           ) : (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <Link
                 href="/store/login"
                 className="text-[11px] font-medium tracking-[0.1em] uppercase text-stone-500 hover:text-black transition-colors px-3 py-1.5"
@@ -119,7 +174,7 @@ export function Header() {
           <button
             aria-label="Open menu"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 text-stone-500 hover:text-black transition-colors rounded-full hover:bg-stone-100"
+            className="lg:hidden p-2 text-stone-500 hover:text-black transition-colors rounded-full hover:bg-stone-100"
           >
             {menuOpen ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -136,7 +191,22 @@ export function Header() {
 
       {/* Mobile Dropdown Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white border-t border-stone-100 px-4 py-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
+        <div className="lg:hidden bg-white border-t border-stone-100 px-4 py-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
+          <form onSubmit={submitSearch} className="flex items-center gap-2">
+            <input
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="Search products"
+              className="h-11 flex-1 rounded-full border border-stone-200 bg-white px-4 text-sm text-stone-700 outline-none transition-colors focus:border-stone-400"
+            />
+            <button
+              type="submit"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-black px-4 text-xs font-medium uppercase tracking-[0.1em] text-white transition-colors hover:bg-stone-800"
+            >
+              Search
+            </button>
+          </form>
+
           <nav className="flex flex-col gap-4">
             {navLinks.map((link) => (
               <Link

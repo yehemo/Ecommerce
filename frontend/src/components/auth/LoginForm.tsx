@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginForm() {
@@ -10,7 +10,6 @@ export default function LoginForm() {
     const [password, setPassword] = useState('');
     const [errors, setErrors] = useState<any>([]);
     const router = useRouter();
-    const searchParams = useSearchParams();
 
     const { login, isLoading } = useAuth({
         middleware: 'guest',
@@ -20,7 +19,9 @@ export default function LoginForm() {
         event.preventDefault();
         const user = await login({ email, password, setErrors });
         if (user) {
-            const next = searchParams.get('next');
+            const next = typeof window !== 'undefined'
+                ? new URLSearchParams(window.location.search).get('next')
+                : null;
             router.push(next || (user.role === 'admin' ? '/admin' : '/store'));
         }
     };

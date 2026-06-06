@@ -50,7 +50,13 @@ function ProductCardSkeleton() {
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  title = 'No products yet',
+  description = 'Check back soon for new arrivals.',
+}: {
+  title?: string;
+  description?: string;
+}) {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-24 gap-4 text-center">
       <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center">
@@ -59,14 +65,22 @@ function EmptyState() {
         </svg>
       </div>
       <div>
-        <p className="text-stone-700 font-medium">No products yet</p>
-        <p className="text-stone-400 text-sm mt-1">Check back soon for new arrivals.</p>
+        <p className="text-stone-700 font-medium">{title}</p>
+        <p className="text-stone-400 text-sm mt-1">{description}</p>
       </div>
     </div>
   );
 }
 
-export function ProductsGrid({ queryString = 'per_page=12&status=active' }: { queryString?: string }) {
+export function ProductsGrid({
+  queryString = 'per_page=12&status=active',
+  emptyTitle,
+  emptyDescription,
+}: {
+  queryString?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+}) {
   const { data, error, isLoading } = useSWR(
     `/api/products?${queryString}`,
     fetcher,
@@ -94,7 +108,7 @@ export function ProductsGrid({ queryString = 'per_page=12&status=active' }: { qu
   const products = data?.data ?? [];
 
   if (!products.length) {
-    return <EmptyState />;
+    return <EmptyState title={emptyTitle} description={emptyDescription} />;
   }
 
   return (

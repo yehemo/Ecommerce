@@ -222,6 +222,61 @@ Changed:
 Why:
 - checkout and the new orders page should share one consistent client-side order contract
 
+### Store Search And Responsive Admin Follow-Up
+
+#### `frontend/src/components/store/header.tsx`
+
+Changed:
+- turned the storefront search icon into a real product search flow
+- added a large-screen inline search input that routes to `/store?search=...`
+- moved medium and small header navigation/actions into the hamburger menu by switching the desktop breakpoint to `lg`
+- kept search available inside the mobile/compact menu
+
+Why:
+- search needed to be usable instead of decorative
+- medium and small screens were becoming overcrowded with nav links, auth buttons, and search controls in one row
+
+#### `frontend/src/app/store/page.tsx`
+#### `frontend/src/components/store/store-search-results.tsx`
+
+Changed:
+- updated `/store` so it has two modes:
+  - the existing home/marketing page when no `search` param exists
+  - a dedicated search-results view when `search` is present
+- added search-results UI with:
+  - current query
+  - sort control
+  - clear/back actions
+  - results grid reusing the existing product cards
+
+Why:
+- search should feel like a first-class storefront browsing mode rather than a disconnected utility
+
+#### `frontend/src/components/store/products-grid.tsx`
+
+Changed:
+- added customizable empty-state text so search can show “no matches” messaging instead of the generic product-empty state
+
+Why:
+- storefront search needs empty results language that matches search intent
+
+#### `frontend/src/components/auth/LoginForm.tsx`
+
+Changed:
+- removed the dependency on `useSearchParams()` and read the `next` redirect from `window.location.search` during submit
+
+Why:
+- this removed the shared-store-layout build blocker on `/store/login` while preserving the existing redirect behavior
+
+#### `frontend/src/components/admin/dashboard-overview.tsx`
+
+Changed:
+- reduced action-button padding and text size on small screens
+- allowed the dashboard action row to wrap
+
+Why:
+- admin dashboard buttons like `Add product` and `View categories` were overflowing the dashboard card on smaller screens
+
 ### Customer Orders API Follow-Up
 
 #### `backend/app/Http/Controllers/Api/OrderController.php`
@@ -328,6 +383,7 @@ Completed:
   - result: `55` tests passed
 - frontend production build passed:
   - `npm run build`
+- frontend production build also passed after the storefront search and responsive admin/header follow-up updates
 
 ### Notes
 

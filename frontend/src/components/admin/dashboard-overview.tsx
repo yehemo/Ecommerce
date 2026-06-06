@@ -38,22 +38,22 @@ export function DashboardOverview() {
               Use the admin area to publish products, keep pricing accurate, and review catalog health before checkout and order work expands.
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3 lg:justify-end">
             <Link
               href="/admin/products"
-              className="rounded-full border border-white/15 px-5 py-3 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
+              className="rounded-full border border-white/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:text-white sm:px-4 sm:py-2.5 sm:text-sm sm:normal-case sm:tracking-normal"
             >
               View products
             </Link>
             <Link
               href="/admin/categories"
-              className="rounded-full border border-white/15 px-5 py-3 text-sm font-medium text-stone-200 transition hover:border-white/30 hover:text-white"
+              className="rounded-full border border-white/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:text-white sm:px-4 sm:py-2.5 sm:text-sm sm:normal-case sm:tracking-normal"
             >
               View categories
             </Link>
             <Link
               href="/admin/products/new"
-              className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-stone-200"
+              className="rounded-full bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-stone-950 transition hover:bg-stone-200 sm:px-4 sm:py-2.5 sm:text-sm sm:normal-case sm:tracking-normal"
             >
               Add product
             </Link>
