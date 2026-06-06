@@ -74,6 +74,12 @@ export function Header() {
           {/* Auth Actions */}
           {user ? (
             <div className="hidden sm:flex items-center gap-2">
+              <Link
+                href="/store/orders"
+                className="text-[11px] font-medium tracking-[0.1em] uppercase text-stone-500 hover:text-black transition-colors border border-stone-200 hover:border-stone-400 rounded-full px-3 py-1.5"
+              >
+                Orders
+              </Link>
               {user.role === 'admin' && (
                 <Link
                   href="/admin"
@@ -147,6 +153,13 @@ export function Header() {
             {user ? (
               <>
                 <p className="text-sm text-stone-500">Hi, {user.name}</p>
+                <Link
+                  href="/store/orders"
+                  onClick={() => setMenuOpen(false)}
+                  className="w-full text-center text-sm font-medium tracking-[0.1em] uppercase border border-stone-300 rounded-full py-2.5 text-stone-600 hover:text-black hover:border-black transition-colors"
+                >
+                  Orders
+                </Link>
                 {user.role === 'admin' && (
                   <Link
                     href="/admin"

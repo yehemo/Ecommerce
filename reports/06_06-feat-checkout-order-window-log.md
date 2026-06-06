@@ -178,6 +178,77 @@ Changed:
 Why:
 - checkout is now protected and must preserve the user's next destination
 
+#### `frontend/src/app/store/orders/page.tsx`
+
+Changed:
+- added a protected customer orders page at `/store/orders`
+- shows saved account addresses at the top with:
+  - create
+  - edit
+  - delete
+  - set default
+- added tabbed order browsing for:
+  - all orders
+  - pending payment
+  - pending shipping
+  - cancelled
+- added inline expandable order cards showing:
+  - order items
+  - totals
+  - payment state
+  - shipping and billing snapshot addresses
+- reused the existing pay, cancel, and order-address edit actions directly inside the order cards when the order is still actionable
+
+Why:
+- customers now need a real account-level place to manage saved addresses and review their order history beyond the single completed-checkout state
+
+#### `frontend/src/components/store/header.tsx`
+
+Changed:
+- added an `Orders` link for authenticated users in both desktop and mobile navigation
+
+Why:
+- the new customer orders page needs to be directly reachable from the storefront navigation
+
+#### `frontend/src/components/store/cart-provider.tsx`
+
+Changed:
+- expanded shared storefront types to support:
+  - orders tabs
+  - order address snapshots
+  - payment summary data
+- kept the checkout and order page using the same API response shapes
+
+Why:
+- checkout and the new orders page should share one consistent client-side order contract
+
+### Customer Orders API Follow-Up
+
+#### `backend/app/Http/Controllers/Api/OrderController.php`
+
+Changed:
+- added authenticated `GET /api/orders`
+- returns only the signed-in user's orders
+- syncs expired pending orders before returning them
+- supports customer-facing tab filters:
+  - `all`
+  - `pending_payment`
+  - `pending_shipping`
+  - `cancelled`
+
+Why:
+- the new `/store/orders` page needs a list endpoint rather than only single-order fetches
+- expired unpaid orders should not appear under the wrong tab because of stale state
+
+#### `backend/routes/api.php`
+
+Changed:
+- added authenticated order list route:
+  - `GET /api/orders`
+
+Why:
+- the storefront now needs a first-class customer order history endpoint
+
 ### Test Coverage
 
 #### `backend/tests/Feature/AddressApiTest.php`
@@ -207,6 +278,16 @@ Added:
 Added:
 - order-address editing coverage within the action window
 - edit blocking coverage after pay, cancel, or expiry
+
+#### `backend/tests/Feature/OrderListApiTest.php`
+
+Added:
+- order list ownership coverage
+- customer-facing tab filter coverage
+- expired-order sync coverage before list responses are returned
+
+Why:
+- the new customer order page depends on correct user scoping and correct tab grouping for pending payment, pending shipping, and cancelled orders
 
 ### Data and Policy Changes
 
@@ -255,3 +336,4 @@ Current scope does not yet include:
 - refunds or returns
 - admin post-payment cancellation flows
 - scheduler/server deployment setup outside the codebase
+- admin-all-orders management across every customer account

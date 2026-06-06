@@ -49,6 +49,27 @@ export type SavedAddress = CheckoutAddressInput & {
   updated_at?: string;
 };
 
+export type OrderAddressSnapshot = {
+  id: string;
+  type: 'shipping' | 'billing';
+  full_name: string;
+  phone: string;
+  line_1: string;
+  line_2: string | null;
+  city: string;
+  postal_code: string;
+};
+
+export type OrderPayment = {
+  id: string;
+  provider: string;
+  provider_reference: string | null;
+  amount_minor: number;
+  currency: string;
+  status: string;
+  paid_at: string | null;
+};
+
 export type CheckoutOrderResponse = {
   id: string;
   order_number: string;
@@ -71,26 +92,11 @@ export type CheckoutOrderResponse = {
     quantity: number;
     line_total_minor: number;
   }>;
-  addresses: Array<{
-    id: string;
-    type: 'shipping' | 'billing';
-    full_name: string;
-    phone: string;
-    line_1: string;
-    line_2: string | null;
-    city: string;
-    postal_code: string;
-  }>;
-  payments: Array<{
-    id: string;
-    provider: string;
-    provider_reference: string | null;
-    amount_minor: number;
-    currency: string;
-    status: string;
-    paid_at: string | null;
-  }>;
+  addresses: OrderAddressSnapshot[];
+  payments: OrderPayment[];
 };
+
+export type OrdersTab = 'all' | 'pending_payment' | 'pending_shipping' | 'cancelled';
 
 type CartContextType = {
   items: CartItem[];
