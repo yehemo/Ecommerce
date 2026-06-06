@@ -2,10 +2,14 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CartItemController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\ImageUploadController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\OrderAddressController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductOptionTypeController;
 use App\Http\Controllers\Api\ProductOptionValueController;
@@ -22,6 +26,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cart/items', [CartItemController::class, 'store']);
     Route::patch('/cart/items/{cartItem}', [CartItemController::class, 'update']);
     Route::delete('/cart/items/{cartItem}', [CartItemController::class, 'destroy']);
+    Route::post('/checkout', [CheckoutController::class, 'store']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::post('/orders/{order}/pay', [OrderController::class, 'pay']);
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+    Route::get('/addresses', [AddressController::class, 'index']);
+    Route::post('/addresses', [AddressController::class, 'store']);
+    Route::patch('/addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
+    Route::patch('/orders/{order}/addresses', [OrderAddressController::class, 'update']);
 });
 
 // Public read-only routes

@@ -7,12 +7,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateAddressRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return $this->user() !== null;
     }
 
     /**
@@ -23,7 +20,14 @@ class UpdateAddressRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'type' => ['sometimes', 'string', 'in:shipping,billing'],
+            'full_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'phone' => ['sometimes', 'required', 'string', 'max:255'],
+            'line_1' => ['sometimes', 'required', 'string', 'max:255'],
+            'line_2' => ['nullable', 'string', 'max:255'],
+            'city' => ['sometimes', 'required', 'string', 'max:255'],
+            'postal_code' => ['sometimes', 'required', 'string', 'max:255'],
+            'is_default' => ['sometimes', 'boolean'],
         ];
     }
 }

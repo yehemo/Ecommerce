@@ -20,7 +20,7 @@ class CartFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'status' => fake()->randomElement(['active', 'converted', 'abandoned']),
+            'status' => fake()->randomElement(['active', 'completed', 'abandoned']),
         ];
     }
 }
