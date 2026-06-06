@@ -27,12 +27,84 @@ export type CartItem = {
   };
 };
 
+export type CheckoutAddressInput = {
+  full_name: string;
+  phone: string;
+  line_1: string;
+  line_2: string | null;
+  city: string;
+  postal_code: string;
+};
+
+export type CheckoutPayload = {
+  shipping_address: CheckoutAddressInput;
+  billing_address: CheckoutAddressInput;
+};
+
+export type SavedAddress = CheckoutAddressInput & {
+  id: string;
+  type: 'shipping' | 'billing';
+  is_default: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type OrderAddressSnapshot = {
+  id: string;
+  type: 'shipping' | 'billing';
+  full_name: string;
+  phone: string;
+  line_1: string;
+  line_2: string | null;
+  city: string;
+  postal_code: string;
+};
+
+export type OrderPayment = {
+  id: string;
+  provider: string;
+  provider_reference: string | null;
+  amount_minor: number;
+  currency: string;
+  status: string;
+  paid_at: string | null;
+};
+
+export type CheckoutOrderResponse = {
+  id: string;
+  order_number: string;
+  status: string;
+  payment_status: string;
+  currency: string;
+  subtotal_minor: number;
+  discount_minor: number;
+  tax_minor: number;
+  shipping_fee_minor: number;
+  total_minor: number;
+  placed_at: string;
+  items: Array<{
+    id: string;
+    product_id: string | null;
+    product_variant_id: string | null;
+    product_name: string;
+    sku: string;
+    unit_price_minor: number;
+    quantity: number;
+    line_total_minor: number;
+  }>;
+  addresses: OrderAddressSnapshot[];
+  payments: OrderPayment[];
+};
+
+export type OrdersTab = 'all' | 'pending_payment' | 'pending_shipping' | 'cancelled';
+
 type CartContextType = {
   items: CartItem[];
   isLoading: boolean;
   addItem: (variant: any, product: any, quantity: number) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
+  refreshCart: () => Promise<void>;
   cartCount: number;
   subtotalMinor: number;
 };
@@ -44,6 +116,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const loadRemoteCart = async () => {
+    const { data } = await axios.get('/api/cart');
+    return data.data.items || [];
+  };
 
   // Load from local storage initially for guests
   useEffect(() => {
@@ -67,8 +144,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         try {
           // 1. Fetch remote cart
-          const { data } = await axios.get('/api/cart');
-          let remoteItems = data.data.items || [];
+          let remoteItems = await loadRemoteCart();
 
           // 2. Merge local items if they exist
           const localItemsStr = localStorage.getItem('lyh_cart');
@@ -177,11 +253,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshCart = async () => {
+    if (!user) {
+      const stored = localStorage.getItem('lyh_cart');
+      setItems(stored ? JSON.parse(stored) : []);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const remoteItems = await loadRemoteCart();
+      setItems(remoteItems);
+    } catch (err) {
+      console.error('Failed to refresh cart', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const cartCount = items.reduce((acc, item) => acc + item.quantity, 0);
   const subtotalMinor = items.reduce((acc, item) => acc + (item.unit_price_minor * item.quantity), 0);
 
   return (
-    <CartContext.Provider value={{ items, isLoading, addItem, updateQuantity, removeItem, cartCount, subtotalMinor }}>
+    <CartContext.Provider value={{ items, isLoading, addItem, updateQuantity, removeItem, refreshCart, cartCount, subtotalMinor }}>
       {children}
     </CartContext.Provider>
   );

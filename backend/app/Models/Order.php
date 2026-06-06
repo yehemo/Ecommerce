@@ -13,6 +13,8 @@ class Order extends Model
     /** @use HasFactory<\Database\Factories\OrderFactory> */
     use HasFactory, HasPrimaryUuid;
 
+    public const ACTION_WINDOW_MINUTES = 10;
+
     protected $fillable = [
         'user_id',
         'order_number',
@@ -64,5 +66,10 @@ class Order extends Model
         return [
             'placed_at' => 'datetime',
         ];
+    }
+
+    public function actionDeadline(): ?\Illuminate\Support\Carbon
+    {
+        return $this->placed_at?->copy()->addMinutes(self::ACTION_WINDOW_MINUTES);
     }
 }

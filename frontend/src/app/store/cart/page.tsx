@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Minus, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/hooks/useAuth';
 
 const formatPrice = (minor: number) =>
   new Intl.NumberFormat('en-US', {
@@ -13,6 +14,7 @@ const formatPrice = (minor: number) =>
   }).format(minor / 100);
 
 export default function CartPage() {
+  const { user } = useAuth({});
   const { items, isLoading, updateQuantity, removeItem, subtotalMinor } = useCart();
 
   const taxMinor = Math.round(subtotalMinor * 0.08); // Mock 8% tax
@@ -147,9 +149,11 @@ export default function CartPage() {
             <span>{formatPrice(totalMinor)}</span>
           </div>
 
-          <Button size="lg" className="w-full h-14 rounded-full text-sm font-medium tracking-[0.1em] uppercase group flex items-center justify-between px-6 bg-black text-white hover:bg-stone-800 transition-all">
-            <span>Checkout</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          <Button asChild size="lg" className="w-full h-14 rounded-full text-sm font-medium tracking-[0.1em] uppercase group flex items-center justify-between px-6 bg-black text-white hover:bg-stone-800 transition-all">
+            <Link href={user ? '/store/checkout' : '/store/login?next=/store/checkout'}>
+              <span>Checkout</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
           </Button>
         </div>
       </div>

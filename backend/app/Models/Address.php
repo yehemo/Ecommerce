@@ -20,9 +20,7 @@ class Address extends Model
         'line_1',
         'line_2',
         'city',
-        'state',
         'postal_code',
-        'country_code',
         'is_default',
     ];
 

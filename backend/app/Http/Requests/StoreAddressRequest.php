@@ -7,12 +7,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAddressRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return $this->user() !== null;
     }
 
     /**
@@ -23,7 +20,14 @@ class StoreAddressRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'type' => ['required', 'string', 'in:shipping,billing'],
+            'full_name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:255'],
+            'line_1' => ['required', 'string', 'max:255'],
+            'line_2' => ['nullable', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
+            'postal_code' => ['required', 'string', 'max:255'],
+            'is_default' => ['sometimes', 'boolean'],
         ];
     }
 }
