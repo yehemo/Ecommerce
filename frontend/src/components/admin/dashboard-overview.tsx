@@ -5,7 +5,8 @@ import useSWR from 'swr';
 import axios from '@/lib/axios';
 
 type PaginatedSummary = {
-  total: number;
+  total?: number;
+  data?: unknown[];
 };
 
 const fetcher = (url: string) => axios.get(url).then((res) => res.data as PaginatedSummary);
@@ -13,8 +14,14 @@ const fetcher = (url: string) => axios.get(url).then((res) => res.data as Pagina
 export function DashboardOverview() {
   const { data: productSummary } = useSWR('/api/products?per_page=1', fetcher);
   const { data: categorySummary } = useSWR('/api/categories?per_page=1', fetcher);
+  const { data: orderSummary } = useSWR('/api/admin/orders', fetcher);
 
   const stats = [
+    {
+      label: 'Orders',
+      value: orderSummary?.total ?? orderSummary?.data?.length ?? '—',
+      hint: 'Every customer order currently available for admin review and fulfillment.',
+    },
     {
       label: 'Products',
       value: productSummary?.total ?? '—',
@@ -35,10 +42,16 @@ export function DashboardOverview() {
           <div className="max-w-2xl space-y-3">
             <h2 className="text-3xl font-semibold tracking-tight text-white">Catalog control starts here.</h2>
             <p className="text-sm leading-6 text-stone-300">
-              Use the admin area to publish products, keep pricing accurate, and review catalog health before checkout and order work expands.
+              Use the admin area to publish products, review incoming orders, and keep fulfillment moving without losing catalog quality.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3 lg:justify-end">
+            <Link
+              href="/admin/orders"
+              className="rounded-full border border-white/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:text-white sm:px-4 sm:py-2.5 sm:text-sm sm:normal-case sm:tracking-normal"
+            >
+              View orders
+            </Link>
             <Link
               href="/admin/products"
               className="rounded-full border border-white/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:text-white sm:px-4 sm:py-2.5 sm:text-sm sm:normal-case sm:tracking-normal"
@@ -61,7 +74,7 @@ export function DashboardOverview() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-3">
         {stats.map((stat) => (
           <article
             key={stat.label}

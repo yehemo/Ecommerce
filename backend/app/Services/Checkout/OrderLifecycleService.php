@@ -3,6 +3,7 @@
 namespace App\Services\Checkout;
 
 use App\Models\Order;
+use App\Models\OrderShipment;
 use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 
@@ -10,7 +11,7 @@ class OrderLifecycleService
 {
     public function syncExpiredOrder(Order $order): Order
     {
-        $order = $order->loadMissing(['payments', 'items']);
+        $order = $order->loadMissing(['payments', 'items', 'shipment']);
 
         if (!$this->shouldExpire($order)) {
             return $order;
@@ -19,7 +20,7 @@ class OrderLifecycleService
         return DB::transaction(function () use ($order) {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
-                ->with(['payments', 'items'])
+                ->with(['payments', 'items', 'shipment'])
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -36,12 +37,76 @@ class OrderLifecycleService
         return $this->isActionablePendingOrder($order);
     }
 
+    public function adminCanCancel(Order $order): bool
+    {
+        return $this->isActionablePendingOrder($order);
+    }
+
+    public function canMarkShipped(Order $order): bool
+    {
+        return $order->status === 'processing' && $order->payment_status === 'paid';
+    }
+
+    public function canMarkDelivered(Order $order): bool
+    {
+        return $order->status === 'shipped' && $order->payment_status === 'paid';
+    }
+
+    public function updateShipment(Order $order, array $shipmentData): Order
+    {
+        return DB::transaction(function () use ($order, $shipmentData) {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->with(['payments', 'items', 'shipment'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($shipmentData['status'] === 'shipped') {
+                if (!$this->canMarkShipped($lockedOrder) && $lockedOrder->status !== 'shipped') {
+                    return $lockedOrder;
+                }
+
+                $this->persistShipment($lockedOrder, [
+                    ...$shipmentData,
+                    'status' => 'shipped',
+                    'shipped_at' => $lockedOrder->shipment?->shipped_at ?? now(),
+                    'delivered_at' => null,
+                ]);
+
+                if ($lockedOrder->status !== 'shipped') {
+                    $lockedOrder->forceFill([
+                        'status' => 'shipped',
+                    ])->save();
+                }
+
+                return $lockedOrder->fresh()->load(['user', 'items', 'addresses', 'payments', 'shipment']);
+            }
+
+            if (!$this->canMarkDelivered($lockedOrder)) {
+                return $lockedOrder;
+            }
+
+            $this->persistShipment($lockedOrder, [
+                ...$shipmentData,
+                'status' => 'delivered',
+                'shipped_at' => $lockedOrder->shipment?->shipped_at ?? now(),
+                'delivered_at' => $lockedOrder->shipment?->delivered_at ?? now(),
+            ]);
+
+            $lockedOrder->forceFill([
+                'status' => 'delivered',
+            ])->save();
+
+            return $lockedOrder->fresh()->load(['user', 'items', 'addresses', 'payments', 'shipment']);
+        });
+    }
+
     public function markPaid(Order $order): Order
     {
         return DB::transaction(function () use ($order) {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
-                ->with(['payments', 'items'])
+                ->with(['payments', 'items', 'shipment'])
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -62,7 +127,7 @@ class OrderLifecycleService
                 'payment_status' => 'paid',
             ])->save();
 
-            return $lockedOrder->fresh()->load(['items', 'addresses', 'payments']);
+            return $lockedOrder->fresh()->load(['items', 'addresses', 'payments', 'shipment']);
         });
     }
 
@@ -71,7 +136,7 @@ class OrderLifecycleService
         return DB::transaction(function () use ($order) {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
-                ->with(['payments', 'items'])
+                ->with(['payments', 'items', 'shipment'])
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -80,6 +145,65 @@ class OrderLifecycleService
             }
 
             return $this->cancelOrder($lockedOrder);
+        });
+    }
+
+    public function adminCancel(Order $order): Order
+    {
+        return DB::transaction(function () use ($order) {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->with(['payments', 'items', 'shipment'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!$this->adminCanCancel($lockedOrder)) {
+                return $lockedOrder;
+            }
+
+            return $this->cancelOrder($lockedOrder);
+        });
+    }
+
+    public function markShipped(Order $order): Order
+    {
+        return DB::transaction(function () use ($order) {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->with(['payments', 'items', 'shipment'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!$this->canMarkShipped($lockedOrder)) {
+                return $lockedOrder;
+            }
+
+            $lockedOrder->forceFill([
+                'status' => 'shipped',
+            ])->save();
+
+            return $lockedOrder->fresh()->load(['items', 'addresses', 'payments', 'user', 'shipment']);
+        });
+    }
+
+    public function markDelivered(Order $order): Order
+    {
+        return DB::transaction(function () use ($order) {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->with(['payments', 'items', 'shipment'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!$this->canMarkDelivered($lockedOrder)) {
+                return $lockedOrder;
+            }
+
+            $lockedOrder->forceFill([
+                'status' => 'delivered',
+            ])->save();
+
+            return $lockedOrder->fresh()->load(['items', 'addresses', 'payments', 'user', 'shipment']);
         });
     }
 
@@ -109,7 +233,7 @@ class OrderLifecycleService
                     $result = DB::transaction(function () use ($order) {
                         $lockedOrder = Order::query()
                             ->whereKey($order->id)
-                            ->with(['payments', 'items'])
+                            ->with(['payments', 'items', 'shipment'])
                             ->lockForUpdate()
                             ->first();
 
@@ -162,6 +286,25 @@ class OrderLifecycleService
         return $order->payments->sortBy('created_at')->first();
     }
 
+    private function persistShipment(Order $order, array $shipmentData): OrderShipment
+    {
+        $shipment = $order->shipment ?? new OrderShipment([
+            'order_id' => $order->id,
+        ]);
+
+        $shipment->forceFill([
+            'carrier' => $shipmentData['carrier'],
+            'tracking_number' => $shipmentData['tracking_number'],
+            'tracking_url' => $shipmentData['tracking_url'] ?? null,
+            'notes' => $shipmentData['notes'] ?? null,
+            'status' => $shipmentData['status'],
+            'shipped_at' => $shipmentData['shipped_at'] ?? $shipment->shipped_at,
+            'delivered_at' => $shipmentData['delivered_at'] ?? $shipment->delivered_at,
+        ])->save();
+
+        return $shipment;
+    }
+
     private function cancelOrder(Order $order): Order
     {
         $this->restoreReservedStock($order);
@@ -180,7 +323,7 @@ class OrderLifecycleService
             'payment_status' => 'cancelled',
         ])->save();
 
-        return $order->fresh()->load(['items', 'addresses', 'payments']);
+        return $order->fresh()->load(['items', 'addresses', 'payments', 'shipment']);
     }
 
     private function restoreReservedStock(Order $order): void

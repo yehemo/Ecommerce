@@ -53,6 +53,8 @@ const tabs: Array<{ id: OrdersTab; label: string }> = [
   { id: 'all', label: 'All Orders' },
   { id: 'pending_payment', label: 'Pending Payment' },
   { id: 'pending_shipping', label: 'Pending Shipping' },
+  { id: 'shipped', label: 'Shipped' },
+  { id: 'delivered', label: 'Delivered' },
   { id: 'cancelled', label: 'Cancelled' },
 ];
 
@@ -131,6 +133,14 @@ const paymentBadgeVariant = (order: CheckoutOrderResponse) => {
 };
 
 const statusLabel = (order: CheckoutOrderResponse) => {
+  if (order.status === 'delivered' && order.payment_status === 'paid') {
+    return 'Delivered';
+  }
+
+  if (order.status === 'shipped' && order.payment_status === 'paid') {
+    return 'Shipped';
+  }
+
   if (order.status === 'processing' && order.payment_status === 'paid') {
     return 'Pending Shipping';
   }
@@ -144,6 +154,18 @@ const statusLabel = (order: CheckoutOrderResponse) => {
   }
 
   return order.status.replace('_', ' ');
+};
+
+const shipmentLabel = (order: CheckoutOrderResponse) => {
+  if (order.shipment?.status === 'delivered') {
+    return 'Delivered';
+  }
+
+  if (order.shipment?.status === 'shipped') {
+    return 'In Transit';
+  }
+
+  return 'Awaiting Shipment';
 };
 
 export default function OrdersPage() {
@@ -894,6 +916,58 @@ export default function OrdersPage() {
                               </div>
                             </>
                           )}
+
+                          <Separator />
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="text-stone-500">Shipment</span>
+                              <span className="font-medium text-black">{shipmentLabel(order)}</span>
+                            </div>
+                            {order.shipment ? (
+                              <>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-stone-500">Carrier</span>
+                                  <span className="font-medium text-black">{order.shipment.carrier}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-stone-500">Tracking number</span>
+                                  <span className="font-medium text-black">{order.shipment.tracking_number}</span>
+                                </div>
+                                {order.shipment.tracking_url && (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-stone-500">Tracking link</span>
+                                    <a
+                                      href={order.shipment.tracking_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="font-medium text-black underline decoration-stone-400 underline-offset-4 transition hover:text-stone-600"
+                                    >
+                                      Track package
+                                    </a>
+                                  </div>
+                                )}
+                                {order.shipment.shipped_at && (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-stone-500">Shipped at</span>
+                                    <span className="font-medium text-black">{formatDate(order.shipment.shipped_at)}</span>
+                                  </div>
+                                )}
+                                {order.shipment.delivered_at && (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-stone-500">Delivered at</span>
+                                    <span className="font-medium text-black">{formatDate(order.shipment.delivered_at)}</span>
+                                  </div>
+                                )}
+                                {order.shipment.notes && (
+                                  <div className="rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2 text-stone-600">
+                                    {order.shipment.notes}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-stone-500">Shipment details will appear here once the order is dispatched.</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>

@@ -24,7 +24,7 @@ class OrderAddressController extends Controller
         if (!$this->orderLifecycleService->canEditAddresses($order)) {
             return response()->json([
                 'message' => 'Order addresses can only be updated within 10 minutes of checkout.',
-                'data' => $order->loadMissing(['items', 'addresses', 'payments']),
+                'data' => $order->loadMissing(['items', 'addresses', 'payments', 'shipment']),
             ], 422);
         }
 
@@ -51,7 +51,7 @@ class OrderAddressController extends Controller
 
         return response()->json([
             'message' => 'Order addresses updated successfully.',
-            'data' => $order->fresh()->load(['items', 'addresses', 'payments']),
+            'data' => $order->fresh()->load(['items', 'addresses', 'payments', 'shipment']),
         ]);
     }
 }

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CartItemController;
 use App\Http\Controllers\Api\CategoryController;
@@ -51,6 +52,12 @@ Route::apiResource('variant-option-values', ProductVariantOptionValueController:
 
 // Admin-only write routes
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/admin/orders', [AdminOrderController::class, 'index']);
+    Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show']);
+    Route::patch('/admin/orders/{order}/status', [AdminOrderController::class, 'updateStatus']);
+    Route::patch('/admin/orders/{order}/shipment', [AdminOrderController::class, 'updateShipment']);
+    Route::patch('/admin/orders/{order}/addresses', [AdminOrderController::class, 'updateAddresses']);
+
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::match(['put', 'patch'], '/categories/{category}', [CategoryController::class, 'update']);
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
