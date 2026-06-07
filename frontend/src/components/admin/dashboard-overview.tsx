@@ -7,6 +7,11 @@ import axios from '@/lib/axios';
 type PaginatedSummary = {
   total?: number;
   data?: unknown[];
+  meta?: {
+    total?: number;
+    low_stock_count?: number;
+    out_of_stock_count?: number;
+  };
 };
 
 const fetcher = (url: string) => axios.get(url).then((res) => res.data as PaginatedSummary);
@@ -15,12 +20,18 @@ export function DashboardOverview() {
   const { data: productSummary } = useSWR('/api/products?per_page=1', fetcher);
   const { data: categorySummary } = useSWR('/api/categories?per_page=1', fetcher);
   const { data: orderSummary } = useSWR('/api/admin/orders', fetcher);
+  const { data: inventorySummary } = useSWR('/api/admin/inventory', fetcher);
 
   const stats = [
     {
       label: 'Orders',
       value: orderSummary?.total ?? orderSummary?.data?.length ?? '—',
       hint: 'Every customer order currently available for admin review and fulfillment.',
+    },
+    {
+      label: 'Low Stock',
+      value: inventorySummary?.meta?.low_stock_count ?? '—',
+      hint: 'Variants at or below the current low-stock threshold and still sellable.',
     },
     {
       label: 'Products',
@@ -59,6 +70,12 @@ export function DashboardOverview() {
               View products
             </Link>
             <Link
+              href="/admin/inventory"
+              className="rounded-full border border-white/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:text-white sm:px-4 sm:py-2.5 sm:text-sm sm:normal-case sm:tracking-normal"
+            >
+              View inventory
+            </Link>
+            <Link
               href="/admin/categories"
               className="rounded-full border border-white/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:text-white sm:px-4 sm:py-2.5 sm:text-sm sm:normal-case sm:tracking-normal"
             >
@@ -74,7 +91,7 @@ export function DashboardOverview() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <article
             key={stat.label}

@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 const navItems = [
   { label: 'Dashboard', href: '/admin' },
   { label: 'Orders', href: '/admin/orders' },
+  { label: 'Inventory', href: '/admin/inventory' },
   { label: 'Products', href: '/admin/products' },
   { label: 'Categories', href: '/admin/categories' },
 ];
@@ -47,7 +48,7 @@ export function AdminShell({
               <p className="text-[10px] uppercase tracking-[0.35em] text-stone-500">LYH Admin</p>
               <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">Control Room</h1>
               <p className="mt-2 text-sm text-stone-400">
-                Manage products and keep the catalog healthy.
+                Manage products, inventory, and fulfillment from one place.
               </p>
             </div>
 

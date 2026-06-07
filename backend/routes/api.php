@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\AdminInventoryController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CartItemController;
@@ -57,6 +58,9 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::patch('/admin/orders/{order}/status', [AdminOrderController::class, 'updateStatus']);
     Route::patch('/admin/orders/{order}/shipment', [AdminOrderController::class, 'updateShipment']);
     Route::patch('/admin/orders/{order}/addresses', [AdminOrderController::class, 'updateAddresses']);
+    Route::get('/admin/inventory', [AdminInventoryController::class, 'index']);
+    Route::get('/admin/inventory/{variant}', [AdminInventoryController::class, 'show']);
+    Route::post('/admin/inventory/{variant}/adjust', [AdminInventoryController::class, 'adjust']);
 
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::match(['put', 'patch'], '/categories/{category}', [CategoryController::class, 'update']);
