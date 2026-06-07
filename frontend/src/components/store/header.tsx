@@ -143,9 +143,12 @@ export function Header() {
                   Admin
                 </Link>
               )}
-              <span className="text-[11px] tracking-wide text-stone-500">
+              <Link
+                href="/store/account"
+                className="text-[11px] tracking-wide text-stone-500 transition-colors hover:text-black"
+              >
                 Hi, {user.name?.split(' ')[0]}
-              </span>
+              </Link>
               <button
                 onClick={logout}
                 className="text-[11px] font-medium tracking-[0.1em] uppercase text-stone-500 hover:text-black transition-colors border border-stone-200 hover:border-stone-400 rounded-full px-3 py-1.5"
@@ -222,13 +225,26 @@ export function Header() {
           <div className="pt-4 border-t border-stone-100 flex flex-col gap-3">
             {user ? (
               <>
-                <p className="text-sm text-stone-500">Hi, {user.name}</p>
+                <Link
+                  href="/store/account"
+                  onClick={() => setMenuOpen(false)}
+                  className="text-sm text-stone-500 transition-colors hover:text-black"
+                >
+                  Hi, {user.name}
+                </Link>
                 <Link
                   href="/store/orders"
                   onClick={() => setMenuOpen(false)}
                   className="w-full text-center text-sm font-medium tracking-[0.1em] uppercase border border-stone-300 rounded-full py-2.5 text-stone-600 hover:text-black hover:border-black transition-colors"
                 >
                   Orders
+                </Link>
+                <Link
+                  href="/store/account"
+                  onClick={() => setMenuOpen(false)}
+                  className="w-full text-center text-sm font-medium tracking-[0.1em] uppercase border border-stone-300 rounded-full py-2.5 text-stone-600 hover:text-black hover:border-black transition-colors"
+                >
+                  Account
                 </Link>
                 {user.role === 'admin' && (
                   <Link

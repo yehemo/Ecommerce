@@ -110,6 +110,7 @@ export const useAuth = ({
     login,
     register,
     logout,
+    refreshUser: mutate,
     isLoading: !user && !error,
   };
 };
