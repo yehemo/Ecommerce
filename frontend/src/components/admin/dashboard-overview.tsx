@@ -99,8 +99,8 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/20 backdrop-blur">
-        <p className="text-[11px] uppercase tracking-[0.35em] text-emerald-300">Admin Dashboard</p>
+      <section className="rounded-[2rem] border border-white/10 bg-stone-950/70 p-8 shadow-2xl shadow-black/20">
+        <p className="text-[11px] uppercase tracking-[0.35em] text-stone-300">Admin Dashboard</p>
         <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl space-y-3">
             <h2 className="text-3xl font-semibold tracking-tight text-white">Catalog control starts here.</h2>

@@ -2,8 +2,8 @@ import RegisterForm from '@/components/auth/RegisterForm';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Create Account — LYH',
-  description: 'Create a free LYH account and start shopping today.',
+  title: 'Create Account — CamboShop',
+  description: 'Create a free CamboShop account and start shopping today.',
 };
 
 export default function RegisterPage() {
@@ -17,7 +17,7 @@ export default function RegisterPage() {
             Create your account
           </h1>
           <p className="text-sm text-stone-500">
-            Join LYH and enjoy exclusive member benefits.
+            Join CamboShop and enjoy exclusive member benefits.
           </p>
         </div>
 

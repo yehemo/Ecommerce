@@ -2,8 +2,8 @@ import { ProductListing } from '@/components/store/product-listing';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Kids | LYH',
-  description: 'Shop the kids\' collection at LYH.',
+  title: 'Kids | CamboShop',
+  description: 'Shop the kids\' collection at CamboShop.',
 };
 
 export default function KidsPage() {

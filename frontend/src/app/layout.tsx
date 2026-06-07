@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LYH — Modern Fashion Store",
-  description: "Discover the latest fashion trends at LYH. Shop Women, Men, and Kids collections.",
+  title: "CamboShop — Modern Fashion Store",
+  description: "Discover the latest fashion trends at CamboShop. Shop Women, Men, and Kids collections.",
 };
 
 export default function RootLayout({

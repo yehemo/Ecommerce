@@ -2,8 +2,8 @@ import { ProductListing } from '@/components/store/product-listing';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'New Arrivals | LYH',
-  description: 'Shop the latest new arrivals at LYH.',
+  title: 'New Arrivals | CamboShop',
+  description: 'Shop the latest new arrivals at CamboShop.',
 };
 
 export default function NewArrivalPage() {

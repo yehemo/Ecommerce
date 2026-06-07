@@ -40,12 +40,12 @@ export function AdminShell({
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1f2937,_#09090b_48%)] text-stone-100">
+    <div className="min-h-screen bg-stone-900 text-stone-100">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-4 lg:flex-row lg:px-6">
-        <aside className="w-full rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-72 lg:flex-none">
+        <aside className="w-full rounded-[2rem] border border-white/10 bg-stone-950/90 p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-72 lg:flex-none">
           <div className="space-y-6">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.35em] text-stone-500">LYH Admin</p>
+              <p className="text-[10px] uppercase tracking-[0.35em] text-stone-500">CamboShop Admin</p>
               <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">Control Room</h1>
               <p className="mt-2 text-sm text-stone-400">
                 Manage products, inventory, and fulfillment from one place.
@@ -64,8 +64,8 @@ export function AdminShell({
                     href={item.href}
                     className={`block rounded-2xl px-4 py-3 text-sm transition ${
                       isActive
-                        ? 'bg-white text-stone-950 shadow-lg'
-                        : 'text-stone-300 hover:bg-white/10 hover:text-white'
+                        ? 'bg-stone-100 text-stone-950 shadow-lg'
+                        : 'text-stone-300 hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     {item.label}
@@ -76,7 +76,7 @@ export function AdminShell({
           </div>
 
           <div className="mt-8 space-y-3 border-t border-white/10 pt-5">
-            <div className="rounded-2xl bg-white/5 p-4">
+            <div className="rounded-2xl bg-stone-900 p-4">
               <p className="text-xs uppercase tracking-[0.25em] text-stone-500">Signed in</p>
               <p className="mt-2 text-sm font-medium text-white">{user.name}</p>
               <p className="mt-1 text-sm text-stone-400">{user.email}</p>
