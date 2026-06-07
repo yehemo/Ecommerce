@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AdminInventoryController;
 use App\Http\Controllers\Api\AdminOrderController;
+use App\Http\Controllers\Api\AdminReportController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CartItemController;
 use App\Http\Controllers\Api\CategoryController;
@@ -55,6 +56,7 @@ Route::apiResource('variant-option-values', ProductVariantOptionValueController:
 
 // Admin-only write routes
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/admin/reports', [AdminReportController::class, 'index']);
     Route::get('/admin/orders', [AdminOrderController::class, 'index']);
     Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show']);
     Route::patch('/admin/orders/{order}/status', [AdminOrderController::class, 'updateStatus']);
