@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Services\Inventory\InventoryService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -13,6 +14,10 @@ class CheckoutService
 {
     private const CURRENCY = 'USD';
     private const TAX_RATE = 0.08;
+
+    public function __construct(private readonly InventoryService $inventoryService)
+    {
+    }
 
     public function createOrderFromActiveCart(User $user, array $shippingAddress, array $billingAddress): Order
     {
@@ -94,9 +99,15 @@ class CheckoutService
             $order->items()->createMany($validatedItems->all());
 
             foreach ($validatedItems as $validatedItem) {
-                $variants
-                    ->get($validatedItem['product_variant_id'])
-                    ?->decrement('stock_qty', $validatedItem['quantity']);
+                $variant = $variants->get($validatedItem['product_variant_id']);
+
+                if ($variant) {
+                    $this->inventoryService->reserveForCheckout(
+                        $variant,
+                        $validatedItem['quantity'],
+                        $order,
+                    );
+                }
             }
 
             $order->addresses()->createMany([

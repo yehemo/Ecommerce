@@ -3,11 +3,13 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\AdminInventoryController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CartItemController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\CurrentUserController;
 use App\Http\Controllers\Api\ImageUploadController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderAddressController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\Api\ProductVariantOptionValueController;
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
 });
+Route::middleware(['auth:sanctum'])->patch('/user', [CurrentUserController::class, 'update']);
 
 // Cart routes (auth required)
 Route::middleware('auth:sanctum')->group(function () {
@@ -57,6 +60,9 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::patch('/admin/orders/{order}/status', [AdminOrderController::class, 'updateStatus']);
     Route::patch('/admin/orders/{order}/shipment', [AdminOrderController::class, 'updateShipment']);
     Route::patch('/admin/orders/{order}/addresses', [AdminOrderController::class, 'updateAddresses']);
+    Route::get('/admin/inventory', [AdminInventoryController::class, 'index']);
+    Route::get('/admin/inventory/{variant}', [AdminInventoryController::class, 'show']);
+    Route::post('/admin/inventory/{variant}/adjust', [AdminInventoryController::class, 'adjust']);
 
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::match(['put', 'patch'], '/categories/{category}', [CategoryController::class, 'update']);

@@ -5,10 +5,15 @@ namespace App\Services\Checkout;
 use App\Models\Order;
 use App\Models\OrderShipment;
 use App\Models\Payment;
+use App\Services\Inventory\InventoryService;
 use Illuminate\Support\Facades\DB;
 
 class OrderLifecycleService
 {
+    public function __construct(private readonly InventoryService $inventoryService)
+    {
+    }
+
     public function syncExpiredOrder(Order $order): Order
     {
         $order = $order->loadMissing(['payments', 'items', 'shipment']);
@@ -344,7 +349,11 @@ class OrderLifecycleService
             ->keyBy('id');
 
         foreach ($variantQuantities as $variantId => $quantity) {
-            $variants->get($variantId)?->increment('stock_qty', $quantity);
+            $variant = $variants->get($variantId);
+
+            if ($variant) {
+                $this->inventoryService->restoreForCancellation($variant, $quantity, $order);
+            }
         }
     }
 }
