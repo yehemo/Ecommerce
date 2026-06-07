@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CurrentUserApiTest extends TestCase
@@ -56,6 +57,68 @@ class CurrentUserApiTest extends TestCase
         $this->patchJson('/api/user', [
             'name' => 'Guest',
             'email' => 'guest@example.com',
+        ])->assertUnauthorized();
+    }
+
+    public function test_authenticated_user_can_update_their_password(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('old-password'),
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/user/password', [
+                'current_password' => 'old-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Password updated successfully.');
+
+        $user->refresh();
+
+        $this->assertTrue(Hash::check('new-password', $user->password));
+        $this->assertFalse(Hash::check('old-password', $user->password));
+    }
+
+    public function test_user_cannot_update_password_with_incorrect_current_password(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('old-password'),
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/user/password', [
+                'current_password' => 'wrong-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['current_password']);
+    }
+
+    public function test_user_cannot_update_password_with_mismatched_confirmation(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('old-password'),
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/user/password', [
+                'current_password' => 'old-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'different-password',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
+
+    public function test_guest_cannot_update_password(): void
+    {
+        $this->patchJson('/api/user/password', [
+            'current_password' => 'old-password',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
         ])->assertUnauthorized();
     }
 }

@@ -5,11 +5,11 @@ Project: `Ecommerce`
 
 ### Summary
 
-This report captures the first customer-account expansion slice completed today.
+This report captures the customer-account expansion and follow-up polish completed today.
 
 The main outcome is that the storefront now has a dedicated account page at `/store/account` for every authenticated user, including admin accounts using their own storefront identity.
 
-This slice adds:
+The first slice added:
 - a dedicated account entry point from the user name in the navbar
 - a profile form for updating:
   - `name`
@@ -21,10 +21,20 @@ This slice adds:
 - reusable saved-address management moved into the account area
 - a cleaner `/store/orders` page focused only on order history and order-specific actions
 
+The follow-up polish adds:
+- a tabbed account layout inside `/store/account`
+- a dedicated in-account password change flow
+- clearer separation between:
+  - overview
+  - profile editing
+  - password settings
+  - saved addresses
+
 ### Backend Changes
 
 #### `backend/app/Http/Controllers/Api/CurrentUserController.php`
 #### `backend/app/Http/Requests/UpdateCurrentUserRequest.php`
+#### `backend/app/Http/Requests/UpdateCurrentUserPasswordRequest.php`
 #### `backend/routes/api.php`
 
 Changed:
@@ -36,9 +46,16 @@ Changed:
   - required `name`
   - required unique `email`, ignoring the current user
 - returns the refreshed updated user record
+- added `PATCH /api/user/password`
+- validates:
+  - required `current_password`
+  - required confirmed new password
+  - Laravel default password rules
+- updates the stored password and rotates the remember token
 
 Why:
 - the storefront had a current-user read endpoint, but no matching profile update endpoint for a customer account page
+- the account area also needed a proper signed-in password settings flow instead of sending users through forgot-password behavior
 
 #### `backend/tests/Feature/CurrentUserApiTest.php`
 
@@ -47,9 +64,13 @@ Changed:
   - successful profile update
   - duplicate email rejection
   - guest rejection for `PATCH /api/user`
+  - successful password change
+  - invalid current password rejection
+  - password confirmation mismatch rejection
+  - guest rejection for `PATCH /api/user/password`
 
 Why:
-- the new account profile API needed direct regression coverage
+- the account profile and password APIs both needed direct regression coverage
 
 ### Frontend Changes
 
@@ -57,14 +78,21 @@ Why:
 
 Changed:
 - added the new `/store/account` page
+- expanded it into a tabbed account page with:
+  - `Overview`
+  - `Profile`
+  - `Password`
+  - `Addresses`
 - includes:
   - account overview card
   - profile update form
-  - saved address management section
+  - password update form
+  - saved address management section inside its own tab
 - admin users also see a shortcut to `/admin`
 
 Why:
 - the storefront needed a dedicated account surface instead of treating `/store/orders` as the only personal account page
+- once profile, password, and address settings all lived there, the page needed clearer structure than one long mixed form
 
 #### `frontend/src/components/store/header.tsx`
 
@@ -113,6 +141,23 @@ Changed:
 
 Why:
 - after saving profile changes, the navbar greeting and account summary should update immediately without waiting for a later refetch
+
+### Current Account Support
+
+The storefront account area now supports:
+- viewing account overview details
+- editing:
+  - `name`
+  - `email`
+- changing password with:
+  - current password
+  - new password
+  - confirmation
+- managing reusable saved addresses
+- quick navigation into:
+  - orders
+  - shopping
+  - admin dashboard for admin users
 
 ### Verification
 

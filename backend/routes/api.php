@@ -24,6 +24,7 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
 });
 Route::middleware(['auth:sanctum'])->patch('/user', [CurrentUserController::class, 'update']);
+Route::middleware(['auth:sanctum'])->patch('/user/password', [CurrentUserController::class, 'updatePassword']);
 
 // Cart routes (auth required)
 Route::middleware('auth:sanctum')->group(function () {
