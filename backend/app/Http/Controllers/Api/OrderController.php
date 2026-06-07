@@ -34,7 +34,7 @@ class OrderController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $orders = $this->syncExpiredOrders($orders);
+        $orders = $this->syncOrders($orders);
 
         if ($tab !== 'all') {
             $orders = $orders
@@ -124,10 +124,18 @@ class OrderController extends Controller
      * @param  Collection<int, Order>  $orders
      * @return Collection<int, Order>
      */
-    private function syncExpiredOrders(Collection $orders): Collection
+    private function syncOrders(Collection $orders): Collection
     {
         return $orders
-            ->map(fn (Order $order) => $this->orderLifecycleService->syncExpiredOrder($order))
+            ->map(function (Order $order) {
+                $order = $this->orderLifecycleService->syncExpiredOrder($order);
+
+                if ($order->status === 'pending' && $order->payment_status === 'unpaid') {
+                    $order = $this->payWayService->syncPaymentStatus($order);
+                }
+
+                return $order;
+            })
             ->sortByDesc(fn (Order $order) => $order->placed_at?->getTimestamp() ?? $order->created_at?->getTimestamp() ?? 0)
             ->values();
     }

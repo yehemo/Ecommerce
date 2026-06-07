@@ -90,6 +90,40 @@ class PayWayPaymentApiTest extends TestCase
             ->assertJsonPath('data.payments.0.provider_approval_code', '753786');
     }
 
+    public function test_orders_index_reconciles_an_approved_payway_transaction(): void
+    {
+        Http::fake([
+            'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/check-transaction-2' => Http::response([
+                'data' => [
+                    'payment_status' => 'APPROVED',
+                    'apv' => '112233',
+                    'transaction_date' => '2026-06-08 14:12:00',
+                ],
+                'status' => [
+                    'code' => '00',
+                    'message' => 'Success!',
+                ],
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $order = $this->createPendingOrder($user, [
+            'provider_reference' => 'PW260608141200ABCD12',
+            'qr_string' => 'KHQR-STRING',
+            'expires_at' => now()->addMinutes(5),
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/api/orders?tab=all')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $order->id)
+            ->assertJsonPath('data.0.status', 'processing')
+            ->assertJsonPath('data.0.payment_status', 'paid')
+            ->assertJsonPath('data.0.payments.0.status', 'paid')
+            ->assertJsonPath('data.0.payments.0.provider_status', 'APPROVED')
+            ->assertJsonPath('data.0.payments.0.provider_approval_code', '112233');
+    }
+
     public function test_callback_marks_order_paid_after_verification(): void
     {
         Http::fake([
