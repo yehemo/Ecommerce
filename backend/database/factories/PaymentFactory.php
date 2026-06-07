@@ -21,11 +21,19 @@ class PaymentFactory extends Factory
     {
         return [
             'order_id' => Order::factory(),
-            'provider' => fake()->randomElement(['stripe', 'paypal']),
+            'provider' => fake()->randomElement(['payway', 'manual']),
             'provider_reference' => 'PAY-'.Str::upper(fake()->unique()->bothify('##??##??')),
+            'provider_status' => fake()->randomElement(['PENDING', 'APPROVED', null]),
+            'provider_approval_code' => fake()->optional()->numerify('######'),
             'amount_minor' => fake()->numberBetween(2000, 40000),
             'currency' => 'USD',
             'status' => fake()->randomElement(['pending', 'paid', 'failed']),
+            'qr_string' => null,
+            'qr_image' => null,
+            'deeplink' => null,
+            'callback_payload' => null,
+            'expires_at' => fake()->optional()->dateTimeBetween('-5 minutes', '+10 minutes'),
+            'verified_at' => fake()->optional()->dateTimeBetween('-5 minutes', 'now'),
             'paid_at' => fake()->boolean(70) ? now() : null,
         ];
     }

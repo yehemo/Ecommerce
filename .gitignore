@@ -1,1 +1,4 @@
 .vscode/
+.reports/
+
+credential_info.txt

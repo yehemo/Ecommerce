@@ -137,7 +137,7 @@ class CheckoutApiTest extends TestCase
         $response = $this->actingAs($user)->postJson('/api/checkout', $this->checkoutPayload());
 
         $response->assertCreated()
-            ->assertJsonPath('data.payments.0.provider', 'manual')
+            ->assertJsonPath('data.payments.0.provider', 'payway')
             ->assertJsonPath('data.payments.0.currency', 'USD')
             ->assertJsonPath('data.payments.0.status', 'pending')
             ->assertJsonPath('data.payments.0.amount_minor', 10584);

@@ -76,6 +76,9 @@ const formatRemaining = (remainingMs: number) => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
+const paymentQrIsActive = (expiresAt: string | null | undefined) =>
+  Boolean(expiresAt && new Date(expiresAt).getTime() > Date.now());
+
 const toOrderAddressInput = (order: CheckoutOrderResponse, type: AddressSection): CheckoutAddressInput => {
   const address = order.addresses.find((entry) => entry.type === type);
 
@@ -148,6 +151,7 @@ export default function OrdersPage() {
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [orderActionId, setOrderActionId] = useState<string | null>(null);
+  const [paymentPollingOrderId, setPaymentPollingOrderId] = useState<string | null>(null);
   const [isUpdatingOrderAddresses, setIsUpdatingOrderAddresses] = useState(false);
   const [orderAddressErrors, setOrderAddressErrors] = useState<FieldErrors>({});
   const [orderMessage, setOrderMessage] = useState<string | null>(null);
@@ -221,6 +225,26 @@ export default function OrdersPage() {
     }
   }, [editedBillingSameAsShipping, editedShippingAddress]);
 
+  useEffect(() => {
+    if (!paymentPollingOrderId) {
+      return;
+    }
+
+    const targetOrder = orders.find((order) => order.id === paymentPollingOrderId);
+    const payment = targetOrder?.payments[0] ?? null;
+
+    if (!targetOrder || !paymentQrIsActive(payment?.expires_at) || targetOrder.payment_status === 'paid' || targetOrder.status === 'cancelled') {
+      setPaymentPollingOrderId(null);
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshSingleOrder(paymentPollingOrderId);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [orders, paymentPollingOrderId]);
+
   const toggleExpandedOrder = (order: CheckoutOrderResponse) => {
     setOrderMessage(null);
     setExpandedOrderId((current) => current === order.id ? null : order.id);
@@ -249,6 +273,30 @@ export default function OrdersPage() {
       const updated = current.map((order) => order.id === nextOrder.id ? nextOrder : order);
       return updated;
     });
+  };
+
+  const refreshSingleOrder = async (orderId: string) => {
+    const response = await axios.get(`/api/orders/${orderId}`);
+    const nextOrder = response.data.data as CheckoutOrderResponse;
+
+    replaceOrderInState(nextOrder);
+
+    if (activeTab !== 'all') {
+      const stillMatches = {
+        pending_payment: nextOrder.status === 'pending' && nextOrder.payment_status === 'unpaid',
+        pending_shipping: nextOrder.status === 'processing' && nextOrder.payment_status === 'paid',
+        shipped: nextOrder.status === 'shipped' && nextOrder.payment_status === 'paid',
+        delivered: nextOrder.status === 'delivered' && nextOrder.payment_status === 'paid',
+        cancelled: nextOrder.status === 'cancelled' || nextOrder.payment_status === 'cancelled',
+        all: true,
+      }[activeTab];
+
+      if (!stillMatches) {
+        await loadOrders(activeTab);
+      }
+    }
+
+    return nextOrder;
   };
 
   const saveOrderAddresses = async (orderId: string) => {
@@ -293,9 +341,13 @@ export default function OrdersPage() {
 
       replaceOrderInState(updatedOrder);
       setEditingOrderId(null);
-      setOrderMessage(response.data.message ?? (action === 'pay' ? 'Order marked as paid.' : 'Order cancelled.'));
+      setExpandedOrderId(orderId);
+      setOrderMessage(response.data.message ?? (action === 'pay' ? 'PayWay QR is ready for payment.' : 'Order cancelled.'));
+      setPaymentPollingOrderId(action === 'pay' ? orderId : null);
 
-      await loadOrders(activeTab);
+      if (action === 'cancel') {
+        await loadOrders(activeTab);
+      }
     } catch (error) {
       const response = (error as AxiosError<ApiErrorPayload>).response;
       setOrderMessage(response?.data?.message ?? 'Unable to update this order right now.');
@@ -441,7 +493,7 @@ export default function OrdersPage() {
                             disabled={orderActionId === order.id}
                           >
                             {orderActionId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                            Pay now
+                            {payment?.qr_image ? 'Refresh QR' : 'Get QR'}
                           </Button>
                           <Button
                             variant="outline"
@@ -592,6 +644,12 @@ export default function OrdersPage() {
                                   <span className="text-stone-500">Payment status</span>
                                   <span className="font-medium text-black">{payment.status}</span>
                                 </div>
+                                {payment.provider_reference && (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-stone-500">Transaction</span>
+                                    <span className="font-medium text-right text-black">{payment.provider_reference}</span>
+                                  </div>
+                                )}
                                 {payment.paid_at && (
                                   <div className="flex items-center justify-between">
                                     <span className="text-stone-500">Paid at</span>
@@ -599,6 +657,34 @@ export default function OrdersPage() {
                                   </div>
                                 )}
                               </div>
+                              {canManageOrder && payment.qr_image && (
+                                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                                  <p className="text-sm font-medium text-black">Scan to pay</p>
+                                  <p className="mt-1 text-sm text-stone-500">
+                                    Use any KHQR-supported banking app or open ABA Mobile.
+                                  </p>
+                                  <div className="mt-4 flex justify-center rounded-2xl bg-white p-5 sm:p-6">
+                                    <img
+                                      src={payment.qr_image}
+                                      alt={`PayWay QR for order ${order.order_number}`}
+                                      className="h-72 w-72 rounded-xl object-contain sm:h-80 sm:w-80"
+                                    />
+                                  </div>
+                                  {payment.deeplink ? (
+                                    <Button asChild variant="outline" className="mt-4 w-full rounded-full">
+                                      <a href={payment.deeplink}>Open ABA Mobile</a>
+                                    </Button>
+                                  ) : null}
+                                  <p className="mt-4 text-xs text-stone-500">
+                                    {payment.expires_at
+                                      ? `QR active until ${new Date(payment.expires_at).toLocaleTimeString('en-US', {
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                      })}.`
+                                      : 'Waiting for payment confirmation.'}
+                                  </p>
+                                </div>
+                              )}
                             </>
                           )}
 

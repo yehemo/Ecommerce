@@ -94,6 +94,9 @@ const formatRemaining = (remainingMs: number) => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
+const paymentQrIsActive = (expiresAt: string | null | undefined) =>
+  Boolean(expiresAt && new Date(expiresAt).getTime() > Date.now());
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { user, isLoading: authLoading, error: authError } = useAuth({});
@@ -143,6 +146,7 @@ export default function CheckoutPage() {
     ? new Date(completedOrder.placed_at).getTime() + ORDER_ADDRESS_EDIT_WINDOW_MS - nowMs
     : 0;
   const payment = completedOrder?.payments[0] ?? null;
+  const hasActiveQr = paymentQrIsActive(payment?.expires_at);
   const isOrderPaid = completedOrder?.payment_status === 'paid' || payment?.status === 'paid';
   const isOrderCancelled = completedOrder?.status === 'cancelled'
     || completedOrder?.payment_status === 'cancelled'
@@ -279,6 +283,24 @@ export default function CheckoutPage() {
       cancelled = true;
     };
   }, [completedOrder, hasExpiredPendingOrder, isRefreshingCompletedOrder]);
+
+  useEffect(() => {
+    if (!completedOrder || !hasActiveQr || isOrderPaid || isOrderCancelled) {
+      return;
+    }
+
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await axios.get(`/api/orders/${completedOrder.id}`);
+        const order = response.data.data as CheckoutOrderResponse;
+        persistCompletedOrder(order);
+      } catch (error) {
+        console.error(error);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [completedOrder, hasActiveQr, isOrderCancelled, isOrderPaid]);
 
   useEffect(() => {
     if (!user) {
@@ -463,11 +485,28 @@ export default function CheckoutPage() {
 
       const response = await axios.post('/api/checkout', payload);
       const order = response.data.data as CheckoutOrderResponse;
+      let nextOrder = order;
 
-      persistCompletedOrder(order);
+      try {
+        const paymentResponse = await axios.post(`/api/orders/${order.id}/pay`);
+        nextOrder = paymentResponse.data.data as CheckoutOrderResponse;
+        setOrderAddressMessage(paymentResponse.data.message ?? 'PayWay QR is ready for payment.');
+      } catch (paymentError: unknown) {
+        const paymentAxiosError = paymentError as AxiosError<ApiErrorPayload>;
+        const responseOrder = paymentAxiosError.response?.data?.data;
+
+        if (responseOrder) {
+          nextOrder = responseOrder;
+        }
+
+        setOrderAddressMessage(
+          paymentAxiosError.response?.data?.message ?? 'Order created, but QR could not be prepared immediately.',
+        );
+      }
+
+      persistCompletedOrder(nextOrder);
       setIsEditingOrderAddresses(false);
       setOrderAddressErrors({});
-      setOrderAddressMessage(null);
       await refreshCart();
       await refreshSavedAddresses();
     } catch (error: unknown) {
@@ -635,7 +674,7 @@ export default function CheckoutPage() {
       setIsEditingOrderAddresses(false);
       setOrderAddressErrors({});
       setOrderAddressMessage(
-        action === 'pay' ? 'Order marked as paid.' : 'Order cancelled successfully.',
+        action === 'pay' ? (response.data.message ?? 'PayWay QR is ready for payment.') : 'Order cancelled successfully.',
       );
     } catch (error: unknown) {
       const axiosError = error as AxiosError<ApiErrorPayload>;
@@ -648,7 +687,7 @@ export default function CheckoutPage() {
       setOrderAddressMessage(
         axiosError.response?.data?.message
           || (action === 'pay'
-            ? 'Unable to mark this order as paid.'
+            ? 'Unable to prepare PayWay QR right now.'
             : 'Unable to cancel this order right now.'),
       );
     } finally {
@@ -685,10 +724,10 @@ export default function CheckoutPage() {
               <h1 className="mt-2 text-3xl font-light tracking-tight text-stone-950">Checkout complete</h1>
               <p className="mt-2 max-w-2xl text-sm text-stone-600">
                 {isOrderPaid
-                  ? 'Your placeholder payment has been marked as paid and the order is moving forward.'
+                  ? 'Your PayWay payment is confirmed and the order is moving forward.'
                   : isOrderCancelled
-                    ? 'This order is no longer active. The placeholder payment has been cancelled.'
-                    : 'Your order has been created and a placeholder payment is waiting in pending status.'}
+                    ? 'This order is no longer active. The pending payment has been cancelled.'
+                    : 'Your order is ready for PayWay KHQR payment within the 10-minute action window.'}
               </p>
             </div>
           </div>
@@ -697,7 +736,7 @@ export default function CheckoutPage() {
             <Clock3 className="h-4 w-4 text-stone-400" />
             {canManageCompletedOrder ? (
               <span>
-                Pay, cancel, or edit addresses within {formatRemaining(editableRemainingMs)}.
+                Scan the QR, cancel, or edit addresses within {formatRemaining(editableRemainingMs)}.
               </span>
             ) : hasExpiredPendingOrder || isRefreshingCompletedOrder ? (
               <span>Payment window expired. Refreshing final order state…</span>
@@ -852,7 +891,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between">
                     <span>Provider</span>
-                    <span className="font-medium text-stone-900">{payment?.provider ?? 'manual'}</span>
+                    <span className="font-medium text-stone-900">{payment?.provider ?? 'payway'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Amount</span>
@@ -860,18 +899,43 @@ export default function CheckoutPage() {
                       {formatPrice(payment?.amount_minor ?? completedOrder.total_minor, completedOrder.currency)}
                     </span>
                   </div>
+                  {payment?.provider_reference ? (
+                    <div className="flex justify-between gap-4">
+                      <span>Transaction</span>
+                      <span className="font-medium text-right text-stone-900">{payment.provider_reference}</span>
+                    </div>
+                  ) : null}
                 </div>
+                {payment?.qr_image && canManageCompletedOrder ? (
+                  <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                    <p className="text-sm font-medium text-stone-900">Scan to pay</p>
+                    <p className="mt-1 text-sm text-stone-500">
+                      Use any KHQR-supported banking app or open ABA Mobile directly.
+                    </p>
+                    <div className="mt-4 flex justify-center rounded-2xl bg-white p-5 sm:p-6">
+                      <img
+                        src={payment.qr_image}
+                        alt={`PayWay QR for order ${completedOrder.order_number}`}
+                        className="h-72 w-72 rounded-xl object-contain sm:h-80 sm:w-80"
+                      />
+                    </div>
+                    {payment.deeplink ? (
+                      <Button asChild variant="outline" className="mt-4 w-full rounded-full">
+                        <a href={payment.deeplink}>Open ABA Mobile</a>
+                      </Button>
+                    ) : null}
+                    <p className="mt-4 text-xs text-stone-500">
+                      {payment.expires_at
+                        ? `QR active until ${new Date(payment.expires_at).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}.`
+                        : 'Waiting for payment confirmation.'}
+                    </p>
+                  </div>
+                ) : null}
                 {canManageCompletedOrder ? (
                   <div className="mt-6 flex flex-wrap gap-3">
-                    <Button
-                      type="button"
-                      className="rounded-full bg-black px-4 text-white hover:bg-stone-800"
-                      disabled={activeOrderAction !== null}
-                      onClick={() => submitOrderAction('pay')}
-                    >
-                      {activeOrderAction === 'pay' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Pay now
-                    </Button>
                     <Button
                       type="button"
                       variant="outline"
@@ -1116,7 +1180,7 @@ export default function CheckoutPage() {
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-xl font-medium text-stone-950">Billing address</h2>
-                <p className="mt-1 text-sm text-stone-500">Billing is required in v1 even though payment stays manual.</p>
+                <p className="mt-1 text-sm text-stone-500">Billing is required before the PayWay KHQR payment step.</p>
               </div>
               <label className="inline-flex items-center gap-3 rounded-full border border-stone-200 px-4 py-2 text-sm text-stone-600">
                 <input

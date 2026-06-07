@@ -16,9 +16,17 @@ class Payment extends Model
         'order_id',
         'provider',
         'provider_reference',
+        'provider_status',
+        'provider_approval_code',
         'amount_minor',
         'currency',
         'status',
+        'qr_string',
+        'qr_image',
+        'deeplink',
+        'callback_payload',
+        'expires_at',
+        'verified_at',
         'paid_at',
     ];
 
@@ -33,7 +41,10 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
+            'callback_payload' => 'array',
+            'expires_at' => 'datetime',
             'paid_at' => 'datetime',
+            'verified_at' => 'datetime',
         ];
     }
 }

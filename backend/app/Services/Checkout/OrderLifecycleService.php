@@ -108,7 +108,15 @@ class OrderLifecycleService
 
     public function markPaid(Order $order): Order
     {
-        return DB::transaction(function () use ($order) {
+        return $this->markPaidFromProvider($order);
+    }
+
+    /**
+     * @param  array<string, mixed>  $paymentUpdates
+     */
+    public function markPaidFromProvider(Order $order, array $paymentUpdates = []): Order
+    {
+        return DB::transaction(function () use ($order, $paymentUpdates) {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
                 ->with(['payments', 'items', 'shipment'])
@@ -120,11 +128,15 @@ class OrderLifecycleService
             }
 
             $payment = $this->pendingPayment($lockedOrder);
-            $paidAt = now();
+            $paidAt = $paymentUpdates['paid_at'] ?? now();
 
             $payment->forceFill([
                 'status' => 'paid',
                 'paid_at' => $paidAt,
+                'provider_status' => $paymentUpdates['provider_status'] ?? $payment->provider_status,
+                'provider_approval_code' => $paymentUpdates['provider_approval_code'] ?? $payment->provider_approval_code,
+                'callback_payload' => $paymentUpdates['callback_payload'] ?? $payment->callback_payload,
+                'verified_at' => $paymentUpdates['verified_at'] ?? $payment->verified_at,
             ])->save();
 
             $lockedOrder->forceFill([

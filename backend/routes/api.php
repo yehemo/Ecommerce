@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\CurrentUserController;
 use App\Http\Controllers\Api\ImageUploadController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrderAddressController;
+use App\Http\Controllers\Api\PayWayCallbackController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductOptionTypeController;
 use App\Http\Controllers\Api\ProductOptionValueController;
@@ -25,6 +26,7 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 });
 Route::middleware(['auth:sanctum'])->patch('/user', [CurrentUserController::class, 'update']);
 Route::middleware(['auth:sanctum'])->patch('/user/password', [CurrentUserController::class, 'updatePassword']);
+Route::post('/payments/payway/callback', [PayWayCallbackController::class, 'store'])->name('api.payway.callback');
 
 // Cart routes (auth required)
 Route::middleware('auth:sanctum')->group(function () {

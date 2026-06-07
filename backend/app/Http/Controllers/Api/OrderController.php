@@ -5,14 +5,18 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\Checkout\OrderLifecycleService;
+use App\Services\Payments\PayWayService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class OrderController extends Controller
 {
-    public function __construct(private readonly OrderLifecycleService $orderLifecycleService)
-    {
+    public function __construct(
+        private readonly OrderLifecycleService $orderLifecycleService,
+        private readonly PayWayService $payWayService,
+    ) {
     }
 
     public function index(Request $request): JsonResponse
@@ -48,6 +52,7 @@ class OrderController extends Controller
         abort_unless($order->user_id === $request->user()->id, 403);
 
         $order = $this->orderLifecycleService->syncExpiredOrder($order);
+        $order = $this->payWayService->syncPaymentStatus($order);
 
         return response()->json([
             'data' => $order->loadMissing(['items', 'addresses', 'payments', 'shipment']),
@@ -62,15 +67,22 @@ class OrderController extends Controller
 
         if (!$this->orderLifecycleService->canPay($order)) {
             return response()->json([
-                'message' => 'This order can no longer be marked as paid.',
+                'message' => 'This order can no longer be paid.',
                 'data' => $order->loadMissing(['items', 'addresses', 'payments', 'shipment']),
             ], 422);
         }
 
-        $updatedOrder = $this->orderLifecycleService->markPaid($order);
+        try {
+            $updatedOrder = $this->payWayService->initiateQrPayment($order);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+                'data' => $order->loadMissing(['items', 'addresses', 'payments', 'shipment']),
+            ], 422);
+        }
 
         return response()->json([
-            'message' => 'Order marked as paid.',
+            'message' => 'PayWay QR is ready.',
             'data' => $updatedOrder,
         ]);
     }

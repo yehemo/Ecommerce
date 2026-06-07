@@ -116,7 +116,7 @@ class CheckoutService
             ]);
 
             $order->payments()->create([
-                'provider' => 'manual',
+                'provider' => 'payway',
                 'provider_reference' => null,
                 'amount_minor' => $totalMinor,
                 'currency' => self::CURRENCY,
