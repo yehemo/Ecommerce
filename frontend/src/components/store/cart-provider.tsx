@@ -70,6 +70,17 @@ export type OrderPayment = {
   paid_at: string | null;
 };
 
+export type OrderShipment = {
+  id: string;
+  carrier: string;
+  tracking_number: string;
+  tracking_url: string | null;
+  status: string;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  notes: string | null;
+};
+
 export type CheckoutOrderResponse = {
   id: string;
   order_number: string;
@@ -82,6 +93,7 @@ export type CheckoutOrderResponse = {
   shipping_fee_minor: number;
   total_minor: number;
   placed_at: string;
+  shipment: OrderShipment | null;
   items: Array<{
     id: string;
     product_id: string | null;
@@ -96,7 +108,7 @@ export type CheckoutOrderResponse = {
   payments: OrderPayment[];
 };
 
-export type OrdersTab = 'all' | 'pending_payment' | 'pending_shipping' | 'cancelled';
+export type OrdersTab = 'all' | 'pending_payment' | 'pending_shipping' | 'shipped' | 'delivered' | 'cancelled';
 
 type CartContextType = {
   items: CartItem[];

@@ -56,6 +56,24 @@ class OrderListApiTest extends TestCase
             'paid_at' => now()->subMinutes(14),
         ]);
 
+        $shipped = $this->createOrderForUser($user, [
+            'status' => 'shipped',
+            'payment_status' => 'paid',
+            'placed_at' => now()->subMinutes(25),
+        ], [
+            'status' => 'paid',
+            'paid_at' => now()->subMinutes(24),
+        ]);
+
+        $delivered = $this->createOrderForUser($user, [
+            'status' => 'delivered',
+            'payment_status' => 'paid',
+            'placed_at' => now()->subMinutes(35),
+        ], [
+            'status' => 'paid',
+            'paid_at' => now()->subMinutes(34),
+        ]);
+
         $cancelled = $this->createOrderForUser($user, [
             'status' => 'cancelled',
             'payment_status' => 'cancelled',
@@ -75,6 +93,18 @@ class OrderListApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $pendingShipping->id);
+
+        $this->actingAs($user)
+            ->getJson('/api/orders?tab=shipped')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $shipped->id);
+
+        $this->actingAs($user)
+            ->getJson('/api/orders?tab=delivered')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $delivered->id);
 
         $this->actingAs($user)
             ->getJson('/api/orders?tab=cancelled')

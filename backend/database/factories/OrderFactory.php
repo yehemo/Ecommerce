@@ -27,8 +27,8 @@ class OrderFactory extends Factory
         return [
             'user_id' => User::factory(),
             'order_number' => 'ORD-'.Str::upper(fake()->unique()->bothify('##??##??')),
-            'status' => fake()->randomElement(['pending', 'paid', 'processing']),
-            'payment_status' => fake()->randomElement(['unpaid', 'paid']),
+            'status' => fake()->randomElement(['pending', 'processing', 'shipped', 'delivered', 'cancelled']),
+            'payment_status' => fake()->randomElement(['unpaid', 'paid', 'cancelled']),
             'currency' => 'USD',
             'subtotal_minor' => $subtotal,
             'discount_minor' => $discount,

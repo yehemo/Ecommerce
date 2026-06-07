@@ -18,14 +18,14 @@ class OrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'tab' => ['nullable', 'string', 'in:all,pending_payment,pending_shipping,cancelled'],
+            'tab' => ['nullable', 'string', 'in:all,pending_payment,pending_shipping,shipped,delivered,cancelled'],
         ]);
 
         $tab = $validated['tab'] ?? 'all';
 
         $orders = Order::query()
             ->where('user_id', $request->user()->id)
-            ->with(['items', 'addresses', 'payments'])
+            ->with(['items', 'addresses', 'payments', 'shipment'])
             ->orderByDesc('placed_at')
             ->orderByDesc('created_at')
             ->get();
@@ -50,7 +50,7 @@ class OrderController extends Controller
         $order = $this->orderLifecycleService->syncExpiredOrder($order);
 
         return response()->json([
-            'data' => $order->loadMissing(['items', 'addresses', 'payments']),
+            'data' => $order->loadMissing(['items', 'addresses', 'payments', 'shipment']),
         ]);
     }
 
@@ -63,7 +63,7 @@ class OrderController extends Controller
         if (!$this->orderLifecycleService->canPay($order)) {
             return response()->json([
                 'message' => 'This order can no longer be marked as paid.',
-                'data' => $order->loadMissing(['items', 'addresses', 'payments']),
+                'data' => $order->loadMissing(['items', 'addresses', 'payments', 'shipment']),
             ], 422);
         }
 
@@ -84,7 +84,7 @@ class OrderController extends Controller
         if (!$this->orderLifecycleService->canCancel($order)) {
             return response()->json([
                 'message' => 'This order can no longer be cancelled.',
-                'data' => $order->loadMissing(['items', 'addresses', 'payments']),
+                'data' => $order->loadMissing(['items', 'addresses', 'payments', 'shipment']),
             ], 422);
         }
 
@@ -101,6 +101,8 @@ class OrderController extends Controller
         return match ($tab) {
             'pending_payment' => $order->status === 'pending' && $order->payment_status === 'unpaid',
             'pending_shipping' => $order->status === 'processing' && $order->payment_status === 'paid',
+            'shipped' => $order->status === 'shipped' && $order->payment_status === 'paid',
+            'delivered' => $order->status === 'delivered' && $order->payment_status === 'paid',
             'cancelled' => $order->status === 'cancelled' || $order->payment_status === 'cancelled',
             default => true,
         };
