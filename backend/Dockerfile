@@ -2,8 +2,8 @@ FROM composer:2 AS vendor
 
 WORKDIR /app
 
-COPY backend/composer.json backend/composer.lock ./
-COPY backend ./
+COPY composer.json composer.lock ./
+COPY . ./
 
 RUN composer install \
     --no-dev \
