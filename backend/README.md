@@ -15,6 +15,25 @@ cp .env.example .env
 ./vendor/bin/sail artisan storage:link
 ```
 
+Default local database setup uses the PostgreSQL Sail container:
+
+```env
+FRONTEND_URL=http://localhost:3000
+DB_CONNECTION=pgsql
+DB_HOST=pgsql
+DB_PORT=5432
+DB_DATABASE=laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
+```
+
+If you switch between multiple local clones of this project, stop the previous Sail stack before starting the next one:
+
+```bash
+./vendor/bin/sail down
+./vendor/bin/sail up -d
+```
+
 ## Useful Commands
 
 Run backend tests:

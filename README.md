@@ -13,15 +13,13 @@ This version does **not** include a real payment gateway yet.
 
 - Backend: Laravel 13, Sanctum, PHPUnit
 - Frontend: Next.js 16, React 19, Tailwind CSS 4
-- Database: SQLite by default in `backend/.env.example`
+- Database: PostgreSQL through Laravel Sail
 - Local backend runtime: Laravel Sail
 
 ## Project Structure
 
 - `backend/` Laravel API, auth, admin APIs, seeders, tests
 - `frontend/` Next.js storefront and admin UI
-- `reports/` implementation logs and handoff notes
-
 ## Current Features
 
 ### Storefront
@@ -59,7 +57,20 @@ cp .env.example .env
 
 Notes:
 - `backend/.env.example` uses `APP_URL=http://localhost`
-- SQLite is the default local database in the example config
+- `FRONTEND_URL=http://localhost:3000` is included for local CORS setup
+- the backend runs against the `pgsql` Sail service by default
+- the default backend database config is:
+  - `DB_CONNECTION=pgsql`
+  - `DB_HOST=pgsql`
+  - `DB_PORT=5432`
+  - `DB_DATABASE=laravel`
+  - `DB_USERNAME=sail`
+  - `DB_PASSWORD=password`
+- if you switch between multiple local clones of the same project, stop the previous Sail stack first:
+  ```bash
+  ./vendor/bin/sail down
+  ./vendor/bin/sail up -d
+  ```
 - keep the backend reachable at the same host you use from the frontend
 
 ### 2. Frontend
