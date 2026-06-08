@@ -129,6 +129,8 @@ type CartContextType = {
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const CART_STORAGE_KEY = 'camboshop_cart';
+const LEGACY_CART_STORAGE_KEY = 'lyh_cart';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: authLoading } = useAuth({ redirectIfAuthenticated: '' }); 
@@ -141,15 +143,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return data.data.items || [];
   };
 
+  const readGuestCart = () => {
+    const stored = localStorage.getItem(CART_STORAGE_KEY) ?? localStorage.getItem(LEGACY_CART_STORAGE_KEY);
+
+    if (!stored) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(stored) as CartItem[];
+
+      if (localStorage.getItem(LEGACY_CART_STORAGE_KEY) && !localStorage.getItem(CART_STORAGE_KEY)) {
+        localStorage.setItem(CART_STORAGE_KEY, stored);
+        localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
+      }
+
+      return parsed;
+    } catch {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
+      return [];
+    }
+  };
+
   // Load from local storage initially for guests
   useEffect(() => {
     if (typeof window !== 'undefined' && !user && !authLoading) {
-      const stored = localStorage.getItem('lyh_cart');
-      if (stored) {
-        try {
-          setItems(JSON.parse(stored));
-        } catch (e) {}
-      }
+      setItems(readGuestCart());
       setIsLoading(false);
     }
   }, [user, authLoading]);
@@ -166,9 +186,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           let remoteItems = await loadRemoteCart();
 
           // 2. Merge local items if they exist
-          const localItemsStr = localStorage.getItem('lyh_cart');
-          if (localItemsStr) {
-            const localItems: CartItem[] = JSON.parse(localItemsStr);
+          const localItems = readGuestCart();
+          if (localItems.length > 0) {
             if (localItems.length > 0) {
               for (const local of localItems) {
                 const existing = remoteItems.find((ri: any) => ri.product_variant_id === local.product_variant_id);
@@ -185,7 +204,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 }
               }
               // Clear local storage after successful sync
-              localStorage.removeItem('lyh_cart');
+              localStorage.removeItem(CART_STORAGE_KEY);
+              localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
             }
           }
           setItems(remoteItems);
@@ -197,15 +217,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       };
       syncCart();
     } else if (!authLoading) {
-      const stored = localStorage.getItem('lyh_cart');
-      setItems(stored ? JSON.parse(stored) : []);
+      setItems(readGuestCart());
     }
   }, [user, authLoading]);
 
   // Save to local storage whenever items change IF we are a guest
   useEffect(() => {
     if (!authLoading && !user) {
-      localStorage.setItem('lyh_cart', JSON.stringify(items));
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+      localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
     }
   }, [items, user, authLoading]);
 
@@ -274,8 +294,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const refreshCart = async () => {
     if (!user) {
-      const stored = localStorage.getItem('lyh_cart');
-      setItems(stored ? JSON.parse(stored) : []);
+      setItems(readGuestCart());
       return;
     }
 

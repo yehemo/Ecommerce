@@ -7,7 +7,7 @@ This version covers:
 - admin catalog, orders, fulfillment, inventory, and dashboard reporting
 - seeded demo data for products, categories, and accounts
 
-This version does **not** include a production-ready payment gateway yet.
+This version includes PayWay KHQR sandbox QR payment support, but it is not yet set up as a production-ready live payment deployment.
 
 ## Stack
 
@@ -82,7 +82,7 @@ Notes:
   ```
 - keep the backend reachable at the same host you use from the frontend
 
-Optional PayWay sandbox setup for QR payment branches:
+Optional PayWay sandbox setup:
 - create a sandbox account at `https://developer.payway.com.kh/`
 - after registration, ABA sends sandbox credentials by email
 - the minimum values this project uses are:
@@ -199,13 +199,13 @@ npm run build
 - Authentication uses Laravel Sanctum with session and CSRF cookies.
 - Product and category reads are public, but admin writes require an authenticated admin account.
 - Image upload exists for admin product management.
-- The first release should be treated as **non-payment** for real-world deployment until a real gateway is integrated.
-- PayWay QR setup depends on sandbox credentials from ABA and is only relevant on branches that include the PayWay integration.
+- PayWay QR payment is implemented against the ABA sandbox flow.
+- Real-world deployment should still be treated as non-production payment until live merchant credentials and production payment validation are ready.
 - The backend dependency lock is currently safest on PHP 8.4 hosts; if the team wants PHP 8.3 installs to work consistently, the backend lock file needs to be regenerated on a PHP 8.3-compatible environment.
 
 ## Known First-Version Gaps
 
-- no production-ready payment gateway integration
+- no production-ready live payment deployment
 - no coupon, tax, or advanced shipping fee logic
 - no refund or return flow
 - no email or push notification system
