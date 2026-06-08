@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'payway' => [
+        'base_url' => env('PAYWAY_BASE_URL', 'https://checkout-sandbox.payway.com.kh'),
+        'merchant_id' => env('PAYWAY_MERCHANT_ID'),
+        'public_key' => env('PAYWAY_PUBLIC_KEY'),
+        'callback_url' => env('PAYWAY_CALLBACK_URL'),
+        'payment_option' => env('PAYWAY_PAYMENT_OPTION', 'abapay_khqr'),
+        'qr_image_template' => env('PAYWAY_QR_IMAGE_TEMPLATE', 'template3_color'),
+        'timeout' => (int) env('PAYWAY_TIMEOUT', 15),
+    ],
+
 ];

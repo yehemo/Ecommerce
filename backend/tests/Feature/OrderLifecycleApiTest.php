@@ -8,37 +8,56 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class OrderLifecycleApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_mark_their_pending_unpaid_order_as_paid_within_ten_minutes(): void
+    public function test_user_can_prepare_payway_qr_for_their_pending_unpaid_order_within_ten_minutes(): void
     {
+        config()->set('services.payway.base_url', 'https://checkout-sandbox.payway.com.kh');
+        config()->set('services.payway.merchant_id', 'ec475938');
+        config()->set('services.payway.public_key', 'test-public-key');
+        config()->set('services.payway.callback_url', 'https://merchant.test/api/payments/payway/callback');
+
+        Http::fake([
+            'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/generate-qr' => Http::response([
+                'qrString' => 'KHQR-STRING',
+                'qrImage' => 'data:image/png;base64,AAA',
+                'abapay_deeplink' => 'abamobilebank://ababank.com?type=payway&qrcode=KHQR-STRING',
+                'status' => [
+                    'code' => '0',
+                    'message' => 'Success.',
+                ],
+            ]),
+        ]);
+
         $user = User::factory()->create();
         $order = $this->createOrderWithPayment($user, now()->subMinutes(5));
 
         $this->actingAs($user)
             ->postJson("/api/orders/{$order->id}/pay")
             ->assertOk()
-            ->assertJsonPath('data.status', 'processing')
-            ->assertJsonPath('data.payment_status', 'paid')
-            ->assertJsonPath('data.payments.0.status', 'paid');
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.payment_status', 'unpaid')
+            ->assertJsonPath('data.payments.0.status', 'pending')
+            ->assertJsonPath('data.payments.0.qr_string', 'KHQR-STRING');
 
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
-            'status' => 'processing',
-            'payment_status' => 'paid',
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
         ]);
 
         $this->assertDatabaseHas('payments', [
             'order_id' => $order->id,
-            'status' => 'paid',
+            'status' => 'pending',
         ]);
     }
 
-    public function test_user_cannot_mark_another_users_order_as_paid(): void
+    public function test_user_cannot_prepare_payment_for_another_users_order(): void
     {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -49,7 +68,7 @@ class OrderLifecycleApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_user_cannot_pay_after_ten_minutes_and_order_is_expired(): void
+    public function test_user_cannot_request_payment_after_ten_minutes_and_order_is_expired(): void
     {
         $user = User::factory()->create();
         $order = $this->createOrderWithPayment($user, now()->subMinutes(10));
@@ -62,7 +81,7 @@ class OrderLifecycleApiTest extends TestCase
             ->assertJsonPath('data.payments.0.status', 'cancelled');
     }
 
-    public function test_user_cannot_pay_an_already_cancelled_or_already_paid_order(): void
+    public function test_user_cannot_request_payment_for_an_already_cancelled_or_paid_order(): void
     {
         $user = User::factory()->create();
 
@@ -233,8 +252,25 @@ class OrderLifecycleApiTest extends TestCase
         ]);
     }
 
-    public function test_paying_an_order_does_not_restore_reserved_stock(): void
+    public function test_generating_payment_qr_does_not_restore_reserved_stock(): void
     {
+        config()->set('services.payway.base_url', 'https://checkout-sandbox.payway.com.kh');
+        config()->set('services.payway.merchant_id', 'ec475938');
+        config()->set('services.payway.public_key', 'test-public-key');
+        config()->set('services.payway.callback_url', 'https://merchant.test/api/payments/payway/callback');
+
+        Http::fake([
+            'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/generate-qr' => Http::response([
+                'qrString' => 'KHQR-STRING',
+                'qrImage' => 'data:image/png;base64,AAA',
+                'abapay_deeplink' => 'abamobilebank://ababank.com?type=payway&qrcode=KHQR-STRING',
+                'status' => [
+                    'code' => '0',
+                    'message' => 'Success.',
+                ],
+            ]),
+        ]);
+
         $user = User::factory()->create();
         $variant = ProductVariant::factory()->create([
             'stock_qty' => 2,
@@ -309,7 +345,7 @@ class OrderLifecycleApiTest extends TestCase
 
         Payment::factory()->create(array_merge([
             'order_id' => $order->id,
-            'provider' => 'manual',
+            'provider' => 'payway',
             'provider_reference' => null,
             'amount_minor' => $order->total_minor,
             'currency' => $order->currency,

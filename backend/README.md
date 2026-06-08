@@ -36,6 +36,48 @@ DB_USERNAME=sail
 DB_PASSWORD=password
 ```
 
+Optional PayWay sandbox env for QR payment branches:
+
+```env
+PAYWAY_BASE_URL=https://checkout-sandbox.payway.com.kh
+PAYWAY_MERCHANT_ID=your-merchant-id
+PAYWAY_PUBLIC_KEY=your-public-key
+PAYWAY_CALLBACK_URL=
+PAYWAY_PAYMENT_OPTION=abapay_khqr
+PAYWAY_QR_IMAGE_TEMPLATE=template3_color
+PAYWAY_TIMEOUT=15
+```
+
+Notes:
+- create the sandbox account at `https://developer.payway.com.kh/`
+- ABA sends the sandbox credentials by email after registration
+- this project currently uses the emailed `merchant id` and `public key`
+- if you need callback testing, `PAYWAY_CALLBACK_URL` must be a public `https://...` URL
+- ABA support confirmed that the real ABA app cannot complete sandbox QR payments; you need their simulator app for full sandbox payment testing
+- request the simulator app by emailing `DigitalSupport@ababank.com` with:
+  ```text
+  Dear Digital Support Team,
+
+  Thank you for your reply.
+
+  I would like to request the simulator app for testing ABA
+  PayWay sandbox transactions.
+
+  First name:
+  Last name:
+  Phone number:
+  Email:
+
+  Please let me know the next steps for installation and
+  testing.
+
+  Thank you.
+
+  Best regards,
+  You Name
+  ```
+- wait for ABA to reply with the simulator download link and the simulator-account registration steps before trying payer-side QR testing
+
 If you switch between multiple local clones of this project, stop the previous Sail stack before starting the next one:
 
 ```bash
@@ -62,4 +104,4 @@ Run one test file or filter:
 - Auth uses Laravel Sanctum session cookies.
 - Public catalog reads stay open.
 - Admin write routes require `auth:sanctum` plus admin role middleware.
-- This branch/version does not include a real payment gateway yet.
+- This branch/version is still not a production-ready payment release by default.

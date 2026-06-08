@@ -7,7 +7,7 @@ This version covers:
 - admin catalog, orders, fulfillment, inventory, and dashboard reporting
 - seeded demo data for products, categories, and accounts
 
-This version does **not** include a real payment gateway yet.
+This version does **not** include a production-ready payment gateway yet.
 
 ## Stack
 
@@ -81,6 +81,49 @@ Notes:
   ./vendor/bin/sail up -d
   ```
 - keep the backend reachable at the same host you use from the frontend
+
+Optional PayWay sandbox setup for QR payment branches:
+- create a sandbox account at `https://developer.payway.com.kh/`
+- after registration, ABA sends sandbox credentials by email
+- the minimum values this project uses are:
+  - `PAYWAY_MERCHANT_ID`
+  - `PAYWAY_PUBLIC_KEY`
+- put those values in `backend/.env`
+- example:
+  ```env
+  PAYWAY_BASE_URL=https://checkout-sandbox.payway.com.kh
+  PAYWAY_MERCHANT_ID=your-merchant-id
+  PAYWAY_PUBLIC_KEY=your-public-key
+  PAYWAY_CALLBACK_URL=
+  PAYWAY_PAYMENT_OPTION=abapay_khqr
+  PAYWAY_QR_IMAGE_TEMPLATE=template3_color
+  PAYWAY_TIMEOUT=15
+  ```
+- if you want PayWay callback testing, set `PAYWAY_CALLBACK_URL` to a public `https://...` URL such as an ngrok tunnel
+- ABA confirmed the real ABA app cannot be used to complete sandbox QR payments; for full sandbox payment simulation you need their simulator app
+- to request the simulator app, email `DigitalSupport@ababank.com` with:
+  ```text
+  Dear Digital Support Team,
+
+  Thank you for your reply.
+
+  I would like to request the simulator app for testing ABA
+  PayWay sandbox transactions.
+
+  First name:
+  Last name:
+  Phone number:
+  Email:
+
+  Please let me know the next steps for installation and
+  testing.
+
+  Thank you.
+
+  Best regards,
+  You Name
+  ```
+- wait for ABA to reply with the simulator download link and the simulator-account registration steps before trying payer-side QR testing
 
 ### 2. Frontend
 
@@ -157,11 +200,12 @@ npm run build
 - Product and category reads are public, but admin writes require an authenticated admin account.
 - Image upload exists for admin product management.
 - The first release should be treated as **non-payment** for real-world deployment until a real gateway is integrated.
+- PayWay QR setup depends on sandbox credentials from ABA and is only relevant on branches that include the PayWay integration.
 - The backend dependency lock is currently safest on PHP 8.4 hosts; if the team wants PHP 8.3 installs to work consistently, the backend lock file needs to be regenerated on a PHP 8.3-compatible environment.
 
 ## Known First-Version Gaps
 
-- no real payment gateway integration
+- no production-ready payment gateway integration
 - no coupon, tax, or advanced shipping fee logic
 - no refund or return flow
 - no email or push notification system

@@ -64,9 +64,16 @@ export type OrderPayment = {
   id: string;
   provider: string;
   provider_reference: string | null;
+  provider_status: string | null;
+  provider_approval_code: string | null;
   amount_minor: number;
   currency: string;
   status: string;
+  qr_string: string | null;
+  qr_image: string | null;
+  deeplink: string | null;
+  expires_at: string | null;
+  verified_at: string | null;
   paid_at: string | null;
 };
 
