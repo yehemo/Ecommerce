@@ -2,7 +2,8 @@ FROM composer:2 AS vendor
 
 WORKDIR /app
 
-COPY composer.json composer.lock ./
+COPY backend/composer.json backend/composer.lock ./
+COPY backend ./
 
 RUN composer install \
     --no-dev \
@@ -34,9 +35,7 @@ RUN apk add --no-cache \
     pdo_pgsql \
     zip
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-COPY --from=vendor /app/vendor /app/vendor
-COPY . .
+COPY --from=vendor /app /app
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
@@ -44,8 +43,7 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
-ENV PORT=10000
 
-EXPOSE 10000
+EXPOSE 8080
 
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
