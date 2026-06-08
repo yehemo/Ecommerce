@@ -19,7 +19,6 @@ class PayWayPaymentApiTest extends TestCase
         config()->set('services.payway.base_url', 'https://checkout-sandbox.payway.com.kh');
         config()->set('services.payway.merchant_id', 'ec475938');
         config()->set('services.payway.public_key', 'test-public-key');
-        config()->set('services.payway.callback_url', 'https://merchant.test/api/payments/payway/callback');
     }
 
     public function test_user_can_generate_payway_qr_for_a_pending_order(): void
@@ -55,6 +54,30 @@ class PayWayPaymentApiTest extends TestCase
             'provider' => 'payway',
             'status' => 'pending',
         ]);
+
+        Http::assertSent(function ($request) {
+            if ($request->url() !== 'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/generate-qr') {
+                return false;
+            }
+
+            $data = $request->data();
+
+            return isset($data['req_time'], $data['merchant_id'], $data['tran_id'], $data['amount'], $data['payment_option'], $data['currency'], $data['qr_image_template'], $data['hash'])
+                && !isset(
+                    $data['first_name'],
+                    $data['last_name'],
+                    $data['email'],
+                    $data['phone'],
+                    $data['purchase_type'],
+                    $data['items'],
+                    $data['callback_url'],
+                    $data['return_deeplink'],
+                    $data['custom_fields'],
+                    $data['return_params'],
+                    $data['payout'],
+                    $data['lifetime'],
+                );
+        });
     }
 
     public function test_show_endpoint_reconciles_an_approved_payway_transaction(): void
