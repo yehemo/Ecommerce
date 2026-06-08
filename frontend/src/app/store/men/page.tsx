@@ -2,8 +2,8 @@ import { ProductListing } from '@/components/store/product-listing';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Men | LYH',
-  description: 'Shop the men\'s collection at LYH.',
+  title: 'Men | CamboShop',
+  description: 'Shop the men\'s collection at CamboShop.',
 };
 
 export default function MenPage() {

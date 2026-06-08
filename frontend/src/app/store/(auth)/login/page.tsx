@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Sign In — LYH',
-  description: 'Sign in to your LYH account to access your orders and wishlist.',
+  title: 'Sign In — CamboShop',
+  description: 'Sign in to your CamboShop account to access your orders and wishlist.',
 };
 
 export default function LoginPage() {

@@ -6,8 +6,8 @@ import { ProductsGrid } from '@/components/store/products-grid';
 import { StoreSearchResults } from '@/components/store/store-search-results';
 
 export const metadata: Metadata = {
-  title: 'LYH — Modern Fashion Store',
-  description: 'Discover the latest fashion trends at LYH. Shop Women, Men, and Kids collections with free shipping on orders over $100.',
+  title: 'CamboShop — Modern Fashion Store',
+  description: 'Discover the latest fashion trends at CamboShop. Shop Women, Men, and Kids collections with free shipping on orders over $100.',
 };
 
 type Category = {

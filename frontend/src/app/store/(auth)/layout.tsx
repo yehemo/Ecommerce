@@ -16,7 +16,7 @@ export default function AuthLayout({
             href="/store"
             className="text-lg font-light tracking-[0.4em] uppercase text-black hover:opacity-60 transition-opacity"
           >
-            LYH
+            CamboShop
           </a>
         </div>
       </div>
@@ -30,7 +30,7 @@ export default function AuthLayout({
       <div className="w-full border-t border-stone-100 bg-white">
         <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-center">
           <p className="text-[10px] tracking-[0.15em] text-stone-300 uppercase">
-            © {new Date().getFullYear()} LYH. All rights reserved.
+            © {new Date().getFullYear()} CamboShop. All rights reserved.
           </p>
         </div>
       </div>
