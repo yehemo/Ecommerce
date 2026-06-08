@@ -28,7 +28,8 @@ import {
 
 const TAX_RATE = 0.08;
 const ORDER_ADDRESS_EDIT_WINDOW_MS = 10 * 60 * 1000;
-const COMPLETED_ORDER_STORAGE_KEY = 'lyh_completed_order';
+const COMPLETED_ORDER_STORAGE_KEY = 'camboshop_completed_order';
+const LEGACY_COMPLETED_ORDER_STORAGE_KEY = 'lyh_completed_order';
 
 type AddressSection = 'shipping' | 'billing';
 type AddressMode = 'saved' | 'manual';
@@ -202,6 +203,7 @@ export default function CheckoutPage() {
     if (!user) {
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem(COMPLETED_ORDER_STORAGE_KEY);
+        sessionStorage.removeItem(LEGACY_COMPLETED_ORDER_STORAGE_KEY);
       }
 
       setIsRestoringCompletedOrder(false);
@@ -214,7 +216,8 @@ export default function CheckoutPage() {
     }
 
     const restoreCompletedOrder = async () => {
-      const storedOrder = sessionStorage.getItem(COMPLETED_ORDER_STORAGE_KEY);
+      const storedOrder = sessionStorage.getItem(COMPLETED_ORDER_STORAGE_KEY)
+        ?? sessionStorage.getItem(LEGACY_COMPLETED_ORDER_STORAGE_KEY);
 
       if (!storedOrder) {
         setIsRestoringCompletedOrder(false);
@@ -227,9 +230,11 @@ export default function CheckoutPage() {
         const order = response.data.data as CheckoutOrderResponse;
         setCompletedOrder(order);
         sessionStorage.setItem(COMPLETED_ORDER_STORAGE_KEY, JSON.stringify(order));
+        sessionStorage.removeItem(LEGACY_COMPLETED_ORDER_STORAGE_KEY);
       } catch (error) {
         console.error(error);
         sessionStorage.removeItem(COMPLETED_ORDER_STORAGE_KEY);
+        sessionStorage.removeItem(LEGACY_COMPLETED_ORDER_STORAGE_KEY);
       } finally {
         setIsRestoringCompletedOrder(false);
       }
@@ -395,11 +400,13 @@ export default function CheckoutPage() {
 
     if (!order) {
       sessionStorage.removeItem(COMPLETED_ORDER_STORAGE_KEY);
+      sessionStorage.removeItem(LEGACY_COMPLETED_ORDER_STORAGE_KEY);
       return;
     }
 
     setNowMs(Date.now());
     sessionStorage.setItem(COMPLETED_ORDER_STORAGE_KEY, JSON.stringify(order));
+    sessionStorage.removeItem(LEGACY_COMPLETED_ORDER_STORAGE_KEY);
   };
 
   useEffect(() => {

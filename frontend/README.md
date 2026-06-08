@@ -37,4 +37,4 @@ npm run build
 - Storefront lives under `/store`
 - Admin UI lives under `/admin`
 - The frontend expects the Laravel backend to handle Sanctum cookies and CSRF at the API base URL
-- This first version intentionally excludes real payment gateway integration
+- The storefront includes PayWay KHQR sandbox QR payment support, but production-ready live payment setup still needs separate credentials and release validation
