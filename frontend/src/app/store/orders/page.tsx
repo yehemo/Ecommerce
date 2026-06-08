@@ -667,7 +667,7 @@ export default function OrdersPage() {
                                     <img
                                       src={payment.qr_image}
                                       alt={`PayWay QR for order ${order.order_number}`}
-                                      className="h-72 w-72 rounded-xl object-contain sm:h-80 sm:w-80"
+                                      className="h-80 w-80 max-w-full rounded-xl object-contain sm:h-96 sm:w-96"
                                     />
                                   </div>
                                   {payment.deeplink ? (

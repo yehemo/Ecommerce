@@ -349,10 +349,12 @@ export default function CheckoutPage() {
 
     if (!selectedShippingAddressId || !savedAddresses.some((address) => address.id === selectedShippingAddressId)) {
       setSelectedShippingAddressId(preferredShipping.id);
+      setShippingMode((current) => (current === 'manual' ? 'saved' : current));
     }
 
     if (!selectedBillingAddressId || !savedAddresses.some((address) => address.id === selectedBillingAddressId)) {
       setSelectedBillingAddressId(preferredBilling.id);
+      setBillingMode((current) => (current === 'manual' ? 'saved' : current));
     }
   }, [billingSameAsShipping, savedAddresses, selectedBillingAddressId, selectedShippingAddressId]);
 
@@ -916,7 +918,7 @@ export default function CheckoutPage() {
                       <img
                         src={payment.qr_image}
                         alt={`PayWay QR for order ${completedOrder.order_number}`}
-                        className="h-72 w-72 rounded-xl object-contain sm:h-80 sm:w-80"
+                        className="h-80 w-80 max-w-full rounded-xl object-contain sm:h-96 sm:w-96"
                       />
                     </div>
                     {payment.deeplink ? (

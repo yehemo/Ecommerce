@@ -20,7 +20,6 @@ class OrderLifecycleApiTest extends TestCase
         config()->set('services.payway.base_url', 'https://checkout-sandbox.payway.com.kh');
         config()->set('services.payway.merchant_id', 'ec475938');
         config()->set('services.payway.public_key', 'test-public-key');
-        config()->set('services.payway.callback_url', 'https://merchant.test/api/payments/payway/callback');
 
         Http::fake([
             'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/generate-qr' => Http::response([
@@ -257,7 +256,6 @@ class OrderLifecycleApiTest extends TestCase
         config()->set('services.payway.base_url', 'https://checkout-sandbox.payway.com.kh');
         config()->set('services.payway.merchant_id', 'ec475938');
         config()->set('services.payway.public_key', 'test-public-key');
-        config()->set('services.payway.callback_url', 'https://merchant.test/api/payments/payway/callback');
 
         Http::fake([
             'https://checkout-sandbox.payway.com.kh/api/payment-gateway/v1/payments/generate-qr' => Http::response([
