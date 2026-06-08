@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class CategorySeeder extends Seeder
 {
@@ -15,7 +16,15 @@ class CategorySeeder extends Seeder
         $categories = ['Women', 'Men', 'Kids', 'New Arrivals'];
 
         foreach ($categories as $category) {
-            Category::query()->firstOrCreate(['name' => $category]);
+            $slug = Str::slug($category);
+
+            Category::query()->updateOrCreate(
+                ['slug' => $slug],
+                [
+                    'name' => $category,
+                    'is_active' => true,
+                ]
+            );
         }
     }
 }
