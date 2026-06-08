@@ -42,7 +42,6 @@ Optional PayWay sandbox env for QR payment branches:
 PAYWAY_BASE_URL=https://checkout-sandbox.payway.com.kh
 PAYWAY_MERCHANT_ID=your-merchant-id
 PAYWAY_PUBLIC_KEY=your-public-key
-PAYWAY_CALLBACK_URL=
 PAYWAY_PAYMENT_OPTION=abapay_khqr
 PAYWAY_QR_IMAGE_TEMPLATE=template3_color
 PAYWAY_TIMEOUT=15
@@ -52,7 +51,8 @@ Notes:
 - create the sandbox account at `https://developer.payway.com.kh/`
 - ABA sends the sandbox credentials by email after registration
 - this project currently uses the emailed `merchant id` and `public key`
-- if you need callback testing, `PAYWAY_CALLBACK_URL` must be a public `https://...` URL
+- the default app flow uses QR generation plus frontend polling and backend `check-transaction`, so no callback URL is required
+- the callback endpoint is still present in the backend for future provider-driven confirmation
 - ABA support confirmed that the real ABA app cannot complete sandbox QR payments; you need their simulator app for full sandbox payment testing
 - request the simulator app by emailing `DigitalSupport@ababank.com` with:
   ```text

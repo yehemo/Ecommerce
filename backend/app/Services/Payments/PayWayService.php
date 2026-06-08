@@ -25,7 +25,7 @@ class PayWayService
         return DB::transaction(function () use ($order) {
             $lockedOrder = Order::query()
                 ->whereKey($order->id)
-                ->with(['payments', 'items', 'addresses', 'shipment', 'user'])
+                ->with(['payments', 'items', 'addresses', 'shipment'])
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -213,21 +213,7 @@ class PayWayService
     {
         $reqTime = now('UTC')->format('YmdHis');
         $expiresAt = $order->actionDeadline() ?? now()->addMinutes(Order::ACTION_WINDOW_MINUTES);
-        $lifetimeMinutes = min(6, max(1, now()->diffInMinutes($expiresAt, false)));
         $tranId = $this->generateTransactionId();
-        $callbackUrl = $this->callbackUrl();
-        $items = base64_encode(json_encode(
-            $order->items
-                ->map(fn ($item) => [
-                    'name' => $item->product_name,
-                    'quantity' => $item->quantity,
-                    'price' => round($item->unit_price_minor / 100, 2),
-                ])
-                ->values()
-                ->all(),
-            JSON_UNESCAPED_SLASHES
-        ) ?: '[]');
-
         $amount = (float) number_format($payment->amount_minor / 100, 2, '.', '');
 
         $payload = [
@@ -235,60 +221,18 @@ class PayWayService
             'merchant_id' => $this->merchantId(),
             'tran_id' => $tranId,
             'amount' => $amount,
-            'items' => $items,
-            'purchase_type' => 'purchase',
             'payment_option' => config('services.payway.payment_option', 'abapay_khqr'),
-            'lifetime' => $lifetimeMinutes,
-            'qr_image_template' => config('services.payway.qr_image_template', 'template3_color'),
             'currency' => $payment->currency,
+            'qr_image_template' => config('services.payway.qr_image_template', 'template3_color'),
         ];
-
-        $firstName = $this->sanitizeName($order->user?->name, true);
-        $lastName = $this->sanitizeName($order->user?->name, false);
-        $email = $order->user?->email;
-        $phone = $order->addresses->firstWhere('type', 'shipping')?->phone;
-
-        if ($firstName !== null) {
-            $payload['first_name'] = $firstName;
-        }
-
-        if ($lastName !== null) {
-            $payload['last_name'] = $lastName;
-        }
-
-        if (is_string($email) && $email !== '') {
-            $payload['email'] = $email;
-        }
-
-        if (is_string($phone) && $phone !== '') {
-            $payload['phone'] = $phone;
-        }
-
-        $payload['callback_url'] = $callbackUrl !== null ? base64_encode($callbackUrl) : '';
-        $payload['return_deeplink'] = '';
-        $payload['custom_fields'] = '';
-        $payload['return_params'] = '';
-        $payload['payout'] = '';
 
         $hashString = implode('', [
             (string) $payload['req_time'],
             (string) $payload['merchant_id'],
             (string) $payload['tran_id'],
             (string) $payload['amount'],
-            (string) $payload['items'],
-            (string) ($payload['first_name'] ?? ''),
-            (string) ($payload['last_name'] ?? ''),
-            (string) ($payload['email'] ?? ''),
-            (string) ($payload['phone'] ?? ''),
-            (string) $payload['purchase_type'],
             (string) $payload['payment_option'],
-            (string) $payload['callback_url'],
-            (string) $payload['return_deeplink'],
             (string) $payload['currency'],
-            (string) $payload['custom_fields'],
-            (string) $payload['return_params'],
-            (string) $payload['payout'],
-            (string) $payload['lifetime'],
             (string) $payload['qr_image_template'],
         ]);
 
@@ -335,51 +279,9 @@ class PayWayService
         return $publicKey;
     }
 
-    private function callbackUrl(): ?string
-    {
-        $callbackUrl = (string) config('services.payway.callback_url');
-
-        if ($callbackUrl === '') {
-            return null;
-        }
-
-        $host = parse_url($callbackUrl, PHP_URL_HOST);
-        $scheme = parse_url($callbackUrl, PHP_URL_SCHEME);
-
-        if (
-            !is_string($host)
-            || !is_string($scheme)
-            || $scheme !== 'https'
-            || in_array($host, ['localhost', '127.0.0.1'], true)
-        ) {
-            return null;
-        }
-
-        return $callbackUrl;
-    }
-
     private function generateTransactionId(): string
     {
         return 'PW'.now('UTC')->format('ymdHis').Str::upper(Str::random(6));
-    }
-
-    private function sanitizeName(?string $name, bool $first): ?string
-    {
-        $name = trim((string) $name);
-
-        if ($name === '') {
-            return null;
-        }
-
-        $parts = preg_split('/\s+/', preg_replace('/[^\pL\pN\s]/u', '', $name) ?? $name) ?: [];
-
-        if ($parts === []) {
-            return null;
-        }
-
-        $value = $first ? $parts[0] : ($parts[1] ?? $parts[0]);
-
-        return Str::limit($value, 20, '');
     }
 
     /**
