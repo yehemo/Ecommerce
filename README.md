@@ -56,6 +56,15 @@ cp .env.example .env
 ```
 
 Notes:
+- local bootstrap currently expects PHP 8.4 on the host machine for the first `composer install`
+- reason: `composer.json` allows `^8.3`, but the current `composer.lock` was resolved with some PHP 8.4-only Symfony packages
+- if your machine is on PHP 8.3 and `composer install` fails, use one of these options:
+  - upgrade local PHP to 8.4, then run `composer install`
+  - or regenerate the lock on a PHP 8.3-compatible environment before sharing it with other machines:
+    ```bash
+    cd backend
+    composer update
+    ```
 - `backend/.env.example` uses `APP_URL=http://localhost`
 - `FRONTEND_URL=http://localhost:3000` is included for local CORS setup
 - the backend runs against the `pgsql` Sail service by default
@@ -148,6 +157,7 @@ npm run build
 - Product and category reads are public, but admin writes require an authenticated admin account.
 - Image upload exists for admin product management.
 - The first release should be treated as **non-payment** for real-world deployment until a real gateway is integrated.
+- The backend dependency lock is currently safest on PHP 8.4 hosts; if the team wants PHP 8.3 installs to work consistently, the backend lock file needs to be regenerated on a PHP 8.3-compatible environment.
 
 ## Known First-Version Gaps
 

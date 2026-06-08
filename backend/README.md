@@ -15,6 +15,15 @@ cp .env.example .env
 ./vendor/bin/sail artisan storage:link
 ```
 
+Important:
+- the current `composer.lock` was resolved with some PHP 8.4-only packages, so the first `composer install` is safest on a PHP 8.4 host
+- if a teammate is on PHP 8.3 and `composer install` fails, they need either:
+  - local PHP 8.4 for the install step, or
+  - a refreshed lock file generated from a PHP 8.3-compatible environment:
+    ```bash
+    composer update
+    ```
+
 Default local database setup uses the PostgreSQL Sail container:
 
 ```env
