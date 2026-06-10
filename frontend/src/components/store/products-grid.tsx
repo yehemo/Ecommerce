@@ -119,9 +119,10 @@ export function ProductsGrid({
         const isOutOfStock = totalStock === 0;
 
         return (
-          <article
+          <Link
             key={product.id}
-            className="group bg-white rounded-xl overflow-hidden border border-stone-100 hover:shadow-md transition-shadow duration-300"
+            href={`/store/products/${product.id}`}
+            className="group block bg-white rounded-xl overflow-hidden border border-stone-100 hover:shadow-md transition-shadow duration-300"
           >
             {/* Product image */}
             <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
@@ -147,12 +148,11 @@ export function ProductsGrid({
 
               {/* Quick view hover overlay */}
               <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-                <Link
-                  href={`/store/products/${product.id}`}
+                <div
                   className="block w-full bg-black text-white text-[10px] sm:text-[11px] font-medium tracking-[0.08em] sm:tracking-[0.1em] uppercase py-2 sm:py-2.5 rounded-lg hover:bg-stone-800 transition-colors text-center"
                 >
                   View Product
-                </Link>
+                </div>
               </div>
             </div>
 
@@ -166,7 +166,7 @@ export function ProductsGrid({
                 {firstVariant ? formatPrice(firstVariant.price_minor) : '—'}
               </p>
             </div>
-          </article>
+          </Link>
         );
       })}
     </>

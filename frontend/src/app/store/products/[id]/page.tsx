@@ -174,7 +174,7 @@ export default function ProductDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
         
         {/* Left: Image Gallery */}
-        <div className="flex flex-col-reverse lg:flex-row gap-4 h-fit sticky top-24">
+        <div className="flex flex-col-reverse lg:flex-row gap-4 h-fit lg:sticky lg:top-24">
           {images.length > 1 && (
             <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto no-scrollbar py-1 lg:py-0">
               {images.map((img, idx) => (
