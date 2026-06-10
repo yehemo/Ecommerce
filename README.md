@@ -1,36 +1,59 @@
 # Ecommerce
 
-First-version ecommerce platform built with Laravel and Next.js.
+Ecommerce platform built with Laravel and Next.js for storefront, admin, checkout, inventory, and PayWay KHQR sandbox payment flow.
 
-This version covers:
-- storefront browsing, search, cart, checkout, and customer account pages
-- admin catalog, orders, fulfillment, inventory, and dashboard reporting
-- seeded demo data for products, categories, and accounts
+## Primary Testing
 
-This version includes PayWay KHQR sandbox QR payment support, but it is not yet set up as a production-ready live payment deployment.
+This project should be tested primarily in the local environment.
+
+Why local is the primary test target:
+- Laravel Sanctum session and CSRF auth are configured and verified mainly for local development
+- checkout, account, admin, and payment flows are expected to work most reliably through the local Sail + Next.js setup
+- seeded demo accounts and the database workflow are designed around local `migrate --seed`
+
+Use the hosted deployment as a visual demo only:
+- Frontend demo: `https://ecommerce-two-hazel-vqx631jz4e.vercel.app`
+- Backend demo: `https://ecommerce-production-9b3f.up.railway.app`
+
+Important:
+- the hosted deployment is not the primary QA environment
+- login, register, and other authenticated flows may not work perfectly there
+- production hosting should be treated as view-only unless the auth/domain setup is finished properly
+
+## Project Status
+
+Current state of the project:
+- storefront browsing, cart, checkout, account, and order history are implemented
+- admin product, category, order, shipment, inventory, and reporting flows are implemented
+- PayWay KHQR sandbox QR flow is implemented
+- recent UI fixes improved behavior on small and medium screen sizes
+- local setup is the source of truth for feature validation
 
 ## Stack
 
 - Backend: Laravel 13, Sanctum, PHPUnit
 - Frontend: Next.js 16, React 19, Tailwind CSS 4
-- Database: PostgreSQL through Laravel Sail
+- Database: PostgreSQL
 - Local backend runtime: Laravel Sail
+- Payment sandbox: ABA PayWay KHQR
 
 ## Project Structure
 
-- `backend/` Laravel API, auth, admin APIs, seeders, tests
+- `backend/` Laravel API, auth, admin APIs, seeders, tests, Sail runtime config
 - `frontend/` Next.js storefront and admin UI
-## Current Features
+
+## Features
 
 ### Storefront
 
 - category and product browsing
 - product detail pages
-- header search
+- search
 - cart management
 - checkout and order creation
 - customer order history
 - customer account page with profile, password, and saved addresses
+- QR payment flow for PayWay sandbox orders
 
 ### Admin
 
@@ -39,11 +62,18 @@ This version includes PayWay KHQR sandbox QR payment support, but it is not yet 
 - order management
 - shipment and fulfillment tracking
 - inventory management with stock adjustments and movement history
-- business reporting on the admin dashboard
+- business reporting dashboard
 
-## First-Time Setup
+### Payment
 
-### 1. Backend
+- PayWay KHQR sandbox QR generation
+- QR display on checkout and customer orders pages
+- backend payment-status reconciliation
+- larger QR rendering for easier scanning
+
+## Local Setup
+
+### Backend
 
 ```bash
 cd backend
@@ -57,75 +87,33 @@ cp .env.example .env
 
 Notes:
 - local bootstrap currently expects PHP 8.4 on the host machine for the first `composer install`
-- reason: `composer.json` allows `^8.3`, but the current `composer.lock` was resolved with some PHP 8.4-only Symfony packages
-- if your machine is on PHP 8.3 and `composer install` fails, use one of these options:
-  - upgrade local PHP to 8.4, then run `composer install`
-  - or regenerate the lock on a PHP 8.3-compatible environment before sharing it with other machines:
+- `composer.json` allows `^8.3`, but the current `composer.lock` was resolved with PHP 8.4-only Symfony packages
+- if local PHP 8.3 fails on `composer install`, either:
+  - upgrade local PHP to 8.4 first
+  - or regenerate the backend lock file from a PHP 8.3-compatible environment:
     ```bash
     cd backend
     composer update
     ```
-- `backend/.env.example` uses `APP_URL=http://localhost`
-- `FRONTEND_URL=http://localhost:3000` is included for local CORS setup
-- the backend runs against the `pgsql` Sail service by default
-- the default backend database config is:
+- default backend local env values are based on Sail:
   - `DB_CONNECTION=pgsql`
   - `DB_HOST=pgsql`
   - `DB_PORT=5432`
   - `DB_DATABASE=laravel`
   - `DB_USERNAME=sail`
   - `DB_PASSWORD=password`
-- if you switch between multiple local clones of the same project, stop the previous Sail stack first:
-  ```bash
-  ./vendor/bin/sail down
-  ./vendor/bin/sail up -d
-  ```
-- keep the backend reachable at the same host you use from the frontend
+- `backend/.env.example` uses `APP_URL=http://localhost`
+- `FRONTEND_URL=http://localhost:3000` is included for local CORS setup
 
-Optional PayWay sandbox setup:
-- create a sandbox account at `https://developer.payway.com.kh/`
-- after registration, ABA sends sandbox credentials by email
-- the minimum values this project uses are:
-  - `PAYWAY_MERCHANT_ID`
-  - `PAYWAY_PUBLIC_KEY`
-- put those values in `backend/.env`
-- example:
-  ```env
-  PAYWAY_BASE_URL=https://checkout-sandbox.payway.com.kh
-  PAYWAY_MERCHANT_ID=your-merchant-id
-  PAYWAY_PUBLIC_KEY=your-public-key
-  PAYWAY_PAYMENT_OPTION=abapay_khqr
-  PAYWAY_QR_IMAGE_TEMPLATE=template3_color
-  PAYWAY_TIMEOUT=15
-  ```
-- this app’s default sandbox flow uses QR generation plus frontend polling and backend `check-transaction`; no callback URL is required
-- the callback endpoint still exists in the backend for future provider-driven confirmation, but it is not part of the required setup for this version
-- ABA confirmed the real ABA app cannot be used to complete sandbox QR payments; for full sandbox payment simulation you need their simulator app
-- to request the simulator app, email `DigitalSupport@ababank.com` with:
-  ```text
-  Dear Digital Support Team,
+If you switch between multiple local clones, stop the previous stack first:
 
-  Thank you for your reply.
+```bash
+cd backend
+./vendor/bin/sail down
+./vendor/bin/sail up -d
+```
 
-  I would like to request the simulator app for testing ABA
-  PayWay sandbox transactions.
-
-  First name:
-  Last name:
-  Phone number:
-  Email:
-
-  Please let me know the next steps for installation and
-  testing.
-
-  Thank you.
-
-  Best regards,
-  You Name
-  ```
-- wait for ABA to reply with the simulator download link and the simulator-account registration steps before trying payer-side QR testing
-
-### 2. Frontend
+### Frontend
 
 ```bash
 cd frontend
@@ -140,7 +128,7 @@ Default frontend env:
 NEXT_PUBLIC_API_URL=http://localhost
 ```
 
-## Run The App
+## Local Run
 
 Backend API:
 
@@ -156,14 +144,14 @@ cd frontend
 npm run dev
 ```
 
-Main local URLs:
+Primary local URLs:
 - Store: `http://localhost:3000/store`
 - Admin UI: `http://localhost:3000/admin`
 - Backend API base: `http://localhost`
 
 ## Seeded Demo Accounts
 
-After `migrate --seed`:
+After local `migrate --seed`:
 
 - Admin
   - email: `admin@example.com`
@@ -171,6 +159,59 @@ After `migrate --seed`:
 - Customer
   - email: `user@example.com`
   - password: `password`
+
+## PayWay Sandbox Setup
+
+Optional local PayWay sandbox setup:
+
+1. Create a sandbox account at `https://developer.payway.com.kh/`
+2. Wait for ABA to send sandbox credentials by email
+3. Put these values in `backend/.env`
+
+Minimum env values used by this project:
+
+```env
+PAYWAY_BASE_URL=https://checkout-sandbox.payway.com.kh
+PAYWAY_MERCHANT_ID=your-merchant-id
+PAYWAY_PUBLIC_KEY=your-public-key
+PAYWAY_PAYMENT_OPTION=abapay_khqr
+PAYWAY_QR_IMAGE_TEMPLATE=template3_color
+PAYWAY_TIMEOUT=15
+```
+
+Current sandbox flow:
+- backend generates QR through PayWay
+- frontend displays the QR
+- frontend and backend reconcile payment status through provider status checks
+- callback support exists in the backend, but it is not required for the current default flow
+
+For payer-side sandbox testing:
+- the real ABA app cannot be used for sandbox QR payments
+- request the ABA simulator app from `DigitalSupport@ababank.com`
+
+Suggested request template:
+
+```text
+Dear Digital Support Team,
+
+Thank you for your reply.
+
+I would like to request the simulator app for testing ABA
+PayWay sandbox transactions.
+
+First name:
+Last name:
+Phone number:
+Email:
+
+Please let me know the next steps for installation and
+testing.
+
+Thank you.
+
+Best regards,
+Your Name
+```
 
 ## Useful Commands
 
@@ -184,6 +225,7 @@ cd backend
 Targeted backend test:
 
 ```bash
+cd backend
 ./vendor/bin/sail artisan test --filter=AdminApiAuthorizationTest
 ```
 
@@ -194,19 +236,28 @@ cd frontend
 npm run build
 ```
 
-## Important Notes
+## Hosting Note
 
-- Authentication uses Laravel Sanctum with session and CSRF cookies.
-- Product and category reads are public, but admin writes require an authenticated admin account.
-- Image upload exists for admin product management.
-- PayWay QR payment is implemented against the ABA sandbox flow.
-- Real-world deployment should still be treated as non-production payment until live merchant credentials and production payment validation are ready.
-- The backend dependency lock is currently safest on PHP 8.4 hosts; if the team wants PHP 8.3 installs to work consistently, the backend lock file needs to be regenerated on a PHP 8.3-compatible environment.
+The hosted deployment is for presentation only, not primary validation.
 
-## Known First-Version Gaps
+Use the hosted links to:
+- view the UI
+- share the project visually
+- inspect general navigation and layout
 
+Do not treat the hosted deployment as the primary place to validate:
+- login and register
+- Sanctum cookie auth
+- admin session workflows
+- full end-to-end QA
+
+The local environment remains the primary test environment for this project.
+
+## Known Gaps
+
+- hosted auth flow is not treated as fully reliable
 - no production-ready live payment deployment
 - no coupon, tax, or advanced shipping fee logic
 - no refund or return flow
 - no email or push notification system
-- deployment and operations setup still need separate production preparation
+- production deployment and operations still need separate hardening if this project is ever taken beyond demo use
